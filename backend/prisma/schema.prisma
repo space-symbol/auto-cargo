@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String         @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String         @unique
+  password  String
+  phone     String
+  company   String?
+  role      UserRole       @default(CLIENT)
+  createdAt DateTime       @default(now())
+  requests  CargoRequest[]
+}
+
+model CargoRequest {
+  id            String                      @id @default(uuid())
+  cargoType     String
+  weight        Float
+  volume        Float
+  from          String
+  to            String
+  distance      Float?
+  vehicleType   String
+  firstName     String
+  lastName      String
+  email         String
+  phone         String
+  status        CargoRequestStatus          @default(PENDING)
+  cost          Float?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+  userId        String?
+  user          User?                       @relation(fields: [userId], references: [id])
+  statusHistory CargoRequestStatusHistory[]
+}
+
+model CargoRequestStatusHistory {
+  id        String             @id @default(uuid())
+  status    CargoRequestStatus
+  comment   String?
+  createdAt DateTime           @default(now())
+  requestId String
+  request   CargoRequest       @relation(fields: [requestId], references: [id])
+}
+
+model Tariff {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  baseRate     Float // Базовая ставка
+  weightRate   Float // Ставка за кг
+  volumeRate   Float // Ставка за м³
+  distanceRate Float // Ставка за км
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VehicleType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  maxWeight Float
+  maxVolume Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CargoType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+  MANAGER
+}
+
+enum CargoRequestStatus {
+  PENDING
+  PROCESSING
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}

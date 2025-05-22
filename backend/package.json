@@ -1,0 +1,30 @@
+{
+  "name": "transvestor-cargo-portal-backend",
+  "version": "1.0.0",
+  "description": "Backend for Transvestor Cargo Portal",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.4.1",
+    "@fastify/swagger": "^8.12.1",
+    "@fastify/swagger-ui": "^2.0.0",
+    "@prisma/client": "^5.10.2",
+    "@sinclair/typebox": "^0.34.33",
+    "bcrypt": "^5.1.1",
+    "fastify": "^4.29.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.19",
+    "prisma": "^5.10.2",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
