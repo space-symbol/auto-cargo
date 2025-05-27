@@ -62,10 +62,12 @@ export interface Tariff {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  vehicleTypeId: string;
-  cargoTypeId?: string;
-  vehicleType: VehicleType;
-  cargoType?: CargoType;
+  vehicleTypes: Array<{
+    vehicleType: VehicleType;
+  }>;
+  cargoTypes: Array<{
+    cargoType: CargoType;
+  }>;
 }
 
 export interface CargoRequestStatusHistory {

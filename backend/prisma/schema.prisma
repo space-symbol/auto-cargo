@@ -91,14 +91,11 @@ model Tariff {
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  vehicleTypeId String
-  vehicleType   VehicleType @relation(fields: [vehicleTypeId], references: [id])
-  cargoTypeId   String?
-  cargoType     CargoType?  @relation(fields: [cargoTypeId], references: [id])
+  vehicleTypes  VehicleTypeOnTariff[]
+  cargoTypes    CargoTypeOnTariff[]
   requests      CargoRequest[]
 
-  @@index([vehicleTypeId])
-  @@index([cargoTypeId])
+  @@index([isActive])
 }
 
 model VehicleType {
@@ -108,7 +105,7 @@ model VehicleType {
   maxVolume  Float
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
-  tariffs    Tariff[]
+  tariffs    VehicleTypeOnTariff[]
   requests   CargoRequest[]
 }
 
@@ -118,7 +115,7 @@ model CargoType {
   description String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-  tariffs     Tariff[]
+  tariffs     CargoTypeOnTariff[]
   requests    CargoRequest[]
 }
 
@@ -135,4 +132,30 @@ model Address {
   toRequests   CargoRequest[] @relation("ToAddress")
 
   @@unique([city, street, building, postalCode])
+}
+
+// Связующая таблица для VehicleType и Tariff
+model VehicleTypeOnTariff {
+  vehicleType   VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId String
+  tariff        Tariff      @relation(fields: [tariffId], references: [id])
+  tariffId      String
+  createdAt     DateTime    @default(now())
+
+  @@id([vehicleTypeId, tariffId])
+  @@index([vehicleTypeId])
+  @@index([tariffId])
+}
+
+// Связующая таблица для CargoType и Tariff
+model CargoTypeOnTariff {
+  cargoType   CargoType @relation(fields: [cargoTypeId], references: [id])
+  cargoTypeId String
+  tariff      Tariff    @relation(fields: [tariffId], references: [id])
+  tariffId    String
+  createdAt   DateTime  @default(now())
+
+  @@id([cargoTypeId, tariffId])
+  @@index([cargoTypeId])
+  @@index([tariffId])
 }

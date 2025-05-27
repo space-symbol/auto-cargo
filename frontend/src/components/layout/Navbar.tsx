@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, BarChart3, FileText, Settings, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 
 const NavLink = ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
@@ -68,19 +69,35 @@ export default function Navbar() {
                 {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                   <>
                     <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Админ-панель</DropdownMenuLabel>
                     <DropdownMenuItem asChild>
-                      <Link to="/admin/requests">Заявки</Link>
+                      <Link to="/admin/requests" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>Заявки</span>
+                      </Link>
                     </DropdownMenuItem>
                     {user?.role === 'ADMIN' && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/admin/statistics">Статистика</Link>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin/statistics" className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            <span>Статистика</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin/tariffs" className="flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            <span>Тарифы</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
-                  Выйти
+                <DropdownMenuItem onClick={logout} className="flex items-center gap-2 text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  <span>Выйти</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -130,13 +147,24 @@ export default function Navbar() {
                   </Link>
                   {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                     <>
-                      <Link to="/admin/requests" className="block px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
-                        Заявки
+                      <div className="px-3 py-2 text-sm font-semibold text-muted-foreground">
+                        Админ-панель
+                      </div>
+                      <Link to="/admin/requests" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                        <FileText className="h-4 w-4" />
+                        <span>Заявки</span>
                       </Link>
                       {user?.role === 'ADMIN' && (
-                        <Link to="/admin/statistics" className="block px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
-                          Статистика
-                        </Link>
+                        <>
+                          <Link to="/admin/statistics" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                            <BarChart3 className="h-4 w-4" />
+                            <span>Статистика</span>
+                          </Link>
+                          <Link to="/admin/tariffs" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                            <Settings className="h-4 w-4" />
+                            <span>Тарифы</span>
+                          </Link>
+                        </>
                       )}
                     </>
                   )}

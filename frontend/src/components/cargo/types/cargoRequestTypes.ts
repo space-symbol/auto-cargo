@@ -89,8 +89,18 @@ export interface CalculationResultsProps {
       volumeRate: number;
       distanceRate: number;
       isActive: boolean;
-      vehicleTypeId: string;
-      cargoTypeId: string;
+      vehicleTypes: Array<{
+        vehicleType: {
+          id: string;
+          name: string;
+        };
+      }>;
+      cargoTypes: Array<{
+        cargoType: {
+          id: string;
+          name: string;
+        };
+      }>;
     };
   };
   formData: FormValues;

@@ -19,12 +19,28 @@ export class TariffService {
     const tariff = await this.prisma.tariff.findFirst({
       where: { 
         isActive: true,
-        vehicleTypeId,
-        cargoTypeId: cargoTypeId || null
+        vehicleTypes: {
+          some: {
+            vehicleTypeId
+          }
+        },
+        cargoTypes: cargoTypeId ? {
+          some: {
+            cargoTypeId
+          }
+        } : undefined
       },
       include: {
-        vehicleType: true,
-        cargoType: true
+        vehicleTypes: {
+          include: {
+            vehicleType: true
+          }
+        },
+        cargoTypes: {
+          include: {
+            cargoType: true
+          }
+        }
       }
     });
 
@@ -70,8 +86,8 @@ export class TariffService {
     weightRate: number;
     volumeRate: number;
     distanceRate: number;
-    vehicleTypeId: string;
-    cargoTypeId?: string;
+    vehicleTypeIds: string[];
+    cargoTypeIds: string[];
   }) {
     return this.prisma.tariff.create({
       data: {
@@ -80,8 +96,28 @@ export class TariffService {
         weightRate: data.weightRate,
         volumeRate: data.volumeRate,
         distanceRate: data.distanceRate,
-        vehicleTypeId: data.vehicleTypeId,
-        cargoTypeId: data.cargoTypeId
+        vehicleTypes: {
+          create: data.vehicleTypeIds.map(vehicleTypeId => ({
+            vehicleTypeId
+          }))
+        },
+        cargoTypes: {
+          create: data.cargoTypeIds.map(cargoTypeId => ({
+            cargoTypeId
+          }))
+        }
+      },
+      include: {
+        vehicleTypes: {
+          include: {
+            vehicleType: true
+          }
+        },
+        cargoTypes: {
+          include: {
+            cargoType: true
+          }
+        }
       }
     });
   }
@@ -93,12 +129,72 @@ export class TariffService {
     volumeRate?: number;
     distanceRate?: number;
     isActive?: boolean;
-    vehicleTypeId?: string;
-    cargoTypeId?: string;
+    vehicleTypeIds?: string[];
+    cargoTypeIds?: string[];
   }) {
+    const { vehicleTypeIds, cargoTypeIds, ...updateData } = data;
+
+    // Если есть новые ID для связей, обновляем их
+    if (vehicleTypeIds || cargoTypeIds) {
+      // Удаляем старые связи
+      if (vehicleTypeIds) {
+        await this.prisma.vehicleTypeOnTariff.deleteMany({
+          where: { tariffId: id }
+        });
+      }
+      if (cargoTypeIds) {
+        await this.prisma.cargoTypeOnTariff.deleteMany({
+          where: { tariffId: id }
+        });
+      }
+
+      // Создаем новые связи
+      return this.prisma.tariff.update({
+        where: { id },
+        data: {
+          ...updateData,
+          vehicleTypes: vehicleTypeIds ? {
+            create: vehicleTypeIds.map(vehicleTypeId => ({
+              vehicleTypeId
+            }))
+          } : undefined,
+          cargoTypes: cargoTypeIds ? {
+            create: cargoTypeIds.map(cargoTypeId => ({
+              cargoTypeId
+            }))
+          } : undefined
+        },
+        include: {
+          vehicleTypes: {
+            include: {
+              vehicleType: true
+            }
+          },
+          cargoTypes: {
+            include: {
+              cargoType: true
+            }
+          }
+        }
+      });
+    }
+
+    // Если нет новых связей, просто обновляем основные данные
     return this.prisma.tariff.update({
       where: { id },
-      data
+      data: updateData,
+      include: {
+        vehicleTypes: {
+          include: {
+            vehicleType: true
+          }
+        },
+        cargoTypes: {
+          include: {
+            cargoType: true
+          }
+        }
+      }
     });
   }
 
@@ -106,12 +202,28 @@ export class TariffService {
     return this.prisma.tariff.findFirst({
       where: { 
         isActive: true,
-        vehicleTypeId: vehicleTypeId || undefined,
-        cargoTypeId: cargoTypeId || undefined
+        vehicleTypes: vehicleTypeId ? {
+          some: {
+            vehicleTypeId
+          }
+        } : undefined,
+        cargoTypes: cargoTypeId ? {
+          some: {
+            cargoTypeId
+          }
+        } : undefined
       },
       include: {
-        vehicleType: true,
-        cargoType: true
+        vehicleTypes: {
+          include: {
+            vehicleType: true
+          }
+        },
+        cargoTypes: {
+          include: {
+            cargoType: true
+          }
+        }
       }
     });
   }
@@ -119,8 +231,16 @@ export class TariffService {
   async getAllTariffs() {
     return this.prisma.tariff.findMany({
       include: {
-        vehicleType: true,
-        cargoType: true
+        vehicleTypes: {
+          include: {
+            vehicleType: true
+          }
+        },
+        cargoTypes: {
+          include: {
+            cargoType: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });

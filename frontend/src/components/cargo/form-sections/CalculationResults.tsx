@@ -1,16 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowRight } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
+import { AddressDisplay } from './AddressDisplay';
 import { CalculationResultsProps } from '../types/cargoRequestTypes';
-
-const AddressDisplay = ({ address }: { address: any }) => {
-  if (!address) return null;
-  return (
-    <div className="w-full text-center font-medium px-4 py-2 bg-primary/5 rounded-lg">
-      {`${address.city}, ${address.street}, ${address.building}`}
-    </div>
-  );
-};
 
 export const CalculationResults: React.FC<CalculationResultsProps> = ({
   calculatedCost,
@@ -19,25 +11,26 @@ export const CalculationResults: React.FC<CalculationResultsProps> = ({
   vehicleTypes,
   fromAddress,
   toAddress,
-  onRequestSubmit,
+  onRequestSubmit
 }) => {
-  const cargoType = cargoTypes.find(t => t.id === formData.cargoTypeId);
-  const vehicleType = vehicleTypes.find(t => t.id === formData.vehicleTypeId);
-
   return (
-    <div className="bg-background/50 p-6 rounded-lg">
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="bg-background/50 p-4 rounded-lg">
-            <h4 className="font-medium mb-3">Детали груза</h4>
+            <h4 className="font-medium mb-3">Детали заказа</h4>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Тип груза:</span>
-                <span className="font-medium">{cargoType?.name || '-'}</span>
+                <span className="font-medium">
+                  {cargoTypes.find(t => t.id === formData.cargoTypeId)?.name}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Тип транспорта:</span>
-                <span className="font-medium">{vehicleType?.name || '-'}</span>
+                <span className="text-muted-foreground">Тип ТС:</span>
+                <span className="font-medium">
+                  {vehicleTypes.find(t => t.id === formData.vehicleTypeId)?.name}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Вес:</span>
@@ -46,6 +39,32 @@ export const CalculationResults: React.FC<CalculationResultsProps> = ({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Объем:</span>
                 <span className="font-medium">{formData.volume} м³</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Расстояние:</span>
+                <span className="font-medium">{calculatedCost.distance.toFixed(1)} км</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-background/50 p-4 rounded-lg">
+            <h4 className="font-medium mb-3">Применяемый тариф</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Название:</span>
+                <span className="font-medium">{calculatedCost.tariff.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Типы ТС:</span>
+                <span className="font-medium">
+                  {calculatedCost.tariff.vehicleTypes.map(vt => vt.vehicleType.name).join(', ')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Типы груза:</span>
+                <span className="font-medium">
+                  {calculatedCost.tariff.cargoTypes.map(ct => ct.cargoType.name).join(', ')}
+                </span>
               </div>
             </div>
           </div>
@@ -85,16 +104,12 @@ export const CalculationResults: React.FC<CalculationResultsProps> = ({
             <AddressDisplay address={toAddress} />
           </div>
         </div>
+      </div>
 
-        <div className="mt-6">
-          <Button
-            onClick={onRequestSubmit}
-            className="w-full"
-          >
-            Оформить заявку
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+      <div className="flex justify-end">
+        <Button onClick={onRequestSubmit} size="lg">
+          Оформить заявку
+        </Button>
       </div>
     </div>
   );

@@ -124,7 +124,7 @@ async function main() {
     for (const cargoType of createdCargoTypes) {
       const multiplier = cargoTypeMultipliers[cargoType.name];
       
-      await prisma.tariff.upsert({
+      const tariff = await prisma.tariff.upsert({
         where: {
           name: `Тариф ${vehicleType.name} - ${cargoType.name}`
         },
@@ -136,8 +136,16 @@ async function main() {
           volumeRate: volumeRates[vehicleType.name] * multiplier,
           distanceRate: distanceRates[vehicleType.name] * multiplier,
           isActive: true,
-          vehicleTypeId: vehicleType.id,
-          cargoTypeId: cargoType.id
+          vehicleTypes: {
+            create: {
+              vehicleTypeId: vehicleType.id
+            }
+          },
+          cargoTypes: {
+            create: {
+              cargoTypeId: cargoType.id
+            }
+          }
         }
       });
     }
@@ -185,10 +193,20 @@ async function main() {
   // Создаем тестовую заявку для клиента
   const gasel = await prisma.vehicleType.findFirst({ where: { name: 'Газель' } });
   const regularCargo = await prisma.cargoType.findFirst({ where: { name: 'Обычный груз' } });
+  
+  // Находим подходящий тариф
   const tariff = await prisma.tariff.findFirst({
     where: {
-      vehicleTypeId: gasel?.id,
-      cargoTypeId: regularCargo?.id
+      vehicleTypes: {
+        some: {
+          vehicleTypeId: gasel?.id
+        }
+      },
+      cargoTypes: {
+        some: {
+          cargoTypeId: regularCargo?.id
+        }
+      }
     }
   });
 

@@ -13,8 +13,8 @@ interface CreateTariffBody {
   weightRate: number;
   volumeRate: number;
   distanceRate: number;
-  vehicleTypeId: string;
-  cargoTypeId?: string;
+  vehicleTypeIds: string[];
+  cargoTypeIds: string[];
 }
 
 interface UpdateTariffBody {
@@ -24,8 +24,8 @@ interface UpdateTariffBody {
   volumeRate?: number;
   distanceRate?: number;
   isActive?: boolean;
-  vehicleTypeId?: string;
-  cargoTypeId?: string;
+  vehicleTypeIds?: string[];
+  cargoTypeIds?: string[];
 }
 
 export default async function tariffRoutes(fastify: FastifyInstance) {
@@ -59,15 +59,22 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['name', 'baseRate', 'weightRate', 'volumeRate', 'distanceRate', 'vehicleTypeId'],
+        required: ['name', 'baseRate', 'weightRate', 'volumeRate', 'distanceRate', 'vehicleTypeIds'],
         properties: {
           name: { type: 'string' },
           baseRate: { type: 'number', minimum: 0 },
           weightRate: { type: 'number', minimum: 0 },
           volumeRate: { type: 'number', minimum: 0 },
           distanceRate: { type: 'number', minimum: 0 },
-          vehicleTypeId: { type: 'string' },
-          cargoTypeId: { type: 'string' }
+          vehicleTypeIds: { 
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 1
+          },
+          cargoTypeIds: { 
+            type: 'array',
+            items: { type: 'string' }
+          }
         }
       }
     }
@@ -96,8 +103,15 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
           volumeRate: { type: 'number', minimum: 0 },
           distanceRate: { type: 'number', minimum: 0 },
           isActive: { type: 'boolean' },
-          vehicleTypeId: { type: 'string' },
-          cargoTypeId: { type: 'string' }
+          vehicleTypeIds: { 
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 1
+          },
+          cargoTypeIds: { 
+            type: 'array',
+            items: { type: 'string' }
+          }
         }
       }
     }
@@ -173,8 +187,8 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
         weightRate: 10, // Ставка за кг
         volumeRate: 100, // Ставка за м³
         distanceRate: 20, // Ставка за км
-        vehicleTypeId: vehicleType.id,
-        cargoTypeId: cargoType.id
+        vehicleTypeIds: [vehicleType.id],
+        cargoTypeIds: [cargoType.id]
       });
 
       reply.code(201).send(tariff);
