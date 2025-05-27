@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cargoApi } from '@/api/api';
-import { CargoRequestStatus } from '@/types/api';
+import { CargoRequestStatus, CargoRequest } from '@/types/api';
 import { formatDate } from '@/lib/utils';
 import {
   Table,
@@ -24,17 +24,36 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { User, MapPin, Package, Truck, Calendar, DollarSign, Filter, X } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { useQueryClient } from '@tanstack/react-query';
 
 const statusColors: Record<CargoRequestStatus, string> = {
   [CargoRequestStatus.PENDING]: 'bg-yellow-500 hover:bg-yellow-600',
-  [CargoRequestStatus.IN_PROGRESS]: 'bg-blue-500 hover:bg-blue-600',
+  [CargoRequestStatus.PROCESSING]: 'bg-blue-500 hover:bg-blue-600',
+  [CargoRequestStatus.IN_TRANSIT]: 'bg-blue-500 hover:bg-blue-600',
   [CargoRequestStatus.COMPLETED]: 'bg-green-500 hover:bg-green-600',
   [CargoRequestStatus.CANCELLED]: 'bg-red-500 hover:bg-red-600',
 };
 
 const statusLabels: Record<CargoRequestStatus, string> = {
   [CargoRequestStatus.PENDING]: 'В ожидании',
-  [CargoRequestStatus.IN_PROGRESS]: 'В работе',
+  [CargoRequestStatus.PROCESSING]: 'В обработке',
+  [CargoRequestStatus.IN_TRANSIT]: 'В пути',
   [CargoRequestStatus.COMPLETED]: 'Завершено',
   [CargoRequestStatus.CANCELLED]: 'Отменено',
 };
@@ -53,28 +72,32 @@ const LoadingSkeleton = () => (
 );
 
 export default function CargoRequestsList() {
-  const [page, setPage] = React.useState(1);
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<CargoRequestStatus | 'ALL'>('ALL');
+  const [sortBy, setSortBy] = useState<'date' | 'cost'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedRequest, setSelectedRequest] = useState<CargoRequest | null>(null);
+  const { toast } = useToast();
   const pageSize = 10;
+  const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['cargo-requests', page],
-    queryFn: () => cargoApi.getUserRequests(page, pageSize),
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['cargo-requests', page, statusFilter, sortBy, sortOrder],
+    queryFn: () => cargoApi.getUserRequests(page, pageSize, {
+      status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      sortBy,
+      sortOrder
+    }),
   });
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <Card className="shadow-lg">
-          <CardHeader className="border-b">
-            <CardTitle className="text-2xl font-bold">Мои заявки</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <LoadingSkeleton />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const handleCancelRequest = async (request: CargoRequest) => {
+    try {
+      await cargoApi.cancelRequest(request.id);
+      queryClient.invalidateQueries({ queryKey: ['userRequests'] });
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+    }
+  };
 
   if (error) {
     return (
@@ -88,7 +111,7 @@ export default function CargoRequestsList() {
               <div className="text-red-500 text-lg mb-2">Произошла ошибка при загрузке данных</div>
               <Button 
                 variant="outline" 
-                onClick={() => window.location.reload()}
+                onClick={() => refetch()}
                 className="mt-4"
               >
                 Попробовать снова
@@ -100,20 +123,53 @@ export default function CargoRequestsList() {
     );
   }
 
-  const requests = data?.items || [];
-  const totalPages = data?.totalPages || 1;
+  const requests = data?.requests || [];
+  const totalPages = data?.pagination?.totalPages || 1;
 
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="shadow-lg">
         <CardHeader className="border-b">
-          <CardTitle className="text-2xl font-bold">Мои заявки</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold">Мои заявки</CardTitle>
+            <div className="flex gap-4">
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CargoRequestStatus | 'ALL')}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Фильтр по статусу" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">Все статусы</SelectItem>
+                  {Object.entries(statusLabels).map(([status, label]) => (
+                    <SelectItem key={status} value={status}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'date' | 'cost')}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Сортировка" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">По дате</SelectItem>
+                  <SelectItem value="cost">По стоимости</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-6">
           {requests.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-muted-foreground text-lg mb-4">У вас пока нет заявок</div>
-              <Button variant="outline" onClick={() => window.location.href = '/request-submission'}>
+              <Button variant="outline" onClick={() => window.location.href = '/cargo-request'}>
                 Создать заявку
               </Button>
             </div>
@@ -131,25 +187,59 @@ export default function CargoRequestsList() {
                       <TableHead>Статус</TableHead>
                       <TableHead className="text-right">Стоимость</TableHead>
                       <TableHead>Дата создания</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requests.map((request) => (
-                      <TableRow key={request.id} className="hover:bg-muted/50 text-nowrap">
+                    {requests.map((request: CargoRequest) => (
+                      <TableRow 
+                        key={request.id} 
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => setSelectedRequest(request)}
+                      >
                         <TableCell className="font-medium">{request.id.slice(0, 8)}...</TableCell>
-                        <TableCell>{request.from}</TableCell>
-                        <TableCell>{request.to}</TableCell>
-                        <TableCell className="text-right">{request.weight} кг</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">
+                              {request.fromAddress.city}, {request.fromAddress.street}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">
+                              {request.toAddress.city}, {request.toAddress.street}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-nowrap">{request.weight} кг</TableCell>
                         <TableCell className="text-right">{request.volume} м³</TableCell>
                         <TableCell>
-                          <Badge className={`${statusColors[request.status]} text-white`}>
+                          <Badge className={`${statusColors[request.status]} text-white text-nowrap`}>
                             {statusLabels[request.status]}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {request.cost ? `${request.cost.toLocaleString()} ₽` : '-'}
                         </TableCell>
-                        <TableCell>{formatDate(request.createdAt)}</TableCell>
+                        <TableCell className='text-nowrap'>{formatDate(request.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          {request.status === CargoRequestStatus.PENDING && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelRequest(request);
+                              }}
+                              disabled={request.status !== CargoRequestStatus.PENDING}
+                            >
+                              Отменить
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -193,6 +283,107 @@ export default function CargoRequestsList() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Детали заявки</DialogTitle>
+            <DialogDescription>
+              Информация о заявке на перевозку груза
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    <span>Тип груза</span>
+                  </div>
+                  <div className="font-medium">{selectedRequest.cargoType.name}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Truck className="h-4 w-4" />
+                    <span>Тип транспорта</span>
+                  </div>
+                  <div className="font-medium">{selectedRequest.vehicleType.name}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <DollarSign className="h-4 w-4" />
+                    <span>Стоимость</span>
+                  </div>
+                  <div className="font-medium">{selectedRequest.cost ?? 'Не рассчитана'} ₽</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>Адрес отправления</span>
+                  </div>
+                  <div className="font-medium">
+                    {selectedRequest.fromAddress.city}, {selectedRequest.fromAddress.street}, {selectedRequest.fromAddress.building}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>Адрес назначения</span>
+                  </div>
+                  <div className="font-medium">
+                    {selectedRequest.toAddress.city}, {selectedRequest.toAddress.street}, {selectedRequest.toAddress.building}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    <span>Вес груза</span>
+                  </div>
+                  <div className="font-medium">{selectedRequest.weight} кг</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Package className="h-4 w-4" />
+                    <span>Объем груза</span>
+                  </div>
+                  <div className="font-medium">{selectedRequest.volume} м³</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Дата создания</span>
+                </div>
+                <div className="font-medium">{formatDate(selectedRequest.createdAt)}</div>
+              </div>
+
+              <div className="flex justify-end gap-4">
+                {selectedRequest.status === CargoRequestStatus.PENDING && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleCancelRequest(selectedRequest);
+                      setSelectedRequest(null);
+                    }}
+                  >
+                    Отменить заявку
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setSelectedRequest(null)}>
+                  Закрыть
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

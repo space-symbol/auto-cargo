@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../generated/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -17,27 +17,37 @@ export function generateToken(payload: JwtPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 }
 
-export function verifyToken(token: string): JwtPayload {
+export const verifyToken = async (token: string): Promise<JwtPayload> => {
   try {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    return decoded;
   } catch (error) {
     throw new Error('Invalid token');
   }
-}
+};
 
-export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
+export const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    const authHeader = request.headers.authorization;
-    if (!authHeader) {
-      throw new Error('No authorization header');
+    const token = request.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw new Error('No token provided');
     }
-
-    const token = authHeader.replace('Bearer ', '');
-    const payload = verifyToken(token);
-    
-    // Add user to request object
-    (request as any).user = payload;
-  } catch (error: any) {
-    reply.code(401).send({ error: error.message });
+    const decoded = await verifyToken(token);
+    (request as any).user = decoded;
+  } catch (error) {
+    reply.code(401).send({ error: 'Unauthorized' });
   }
-} 
+};
+
+export const requireRole = (roles: UserRole[]) => {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      if (!user || !roles.includes(user.role)) {
+        throw new Error('Access denied');
+      }
+    } catch (error) {
+      reply.code(403).send({ error: 'Forbidden' });
+    }
+  };
+}; 

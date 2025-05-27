@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { authApi } from '@/api/api';
 import { Loading } from '@/components/ui/loading';
+import { api } from '@/api/api';
 
 interface User {
   id: string;
@@ -30,7 +31,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Функция для безопасного декодирования JWT токена
 function decodeJwtToken(token: string) {
   try {
     const base64Url = token.split('.')[1];
@@ -62,12 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       localStorage.setItem('auth_token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      const savedToken = localStorage.getItem('auth_token');
-      if (!savedToken) {
-        throw new Error('Failed to save token');
-      }
-
       setUser(user);
     } catch (error) {
       console.error('Login error:', error);
@@ -87,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.register(userData);
       const { user, token } = response;
       
-      // Сохраняем токен в localStorage
       localStorage.setItem('auth_token', token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       setUser(user);
     } catch (error) {
@@ -100,20 +96,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('auth_token');
+    delete api.defaults.headers.common['Authorization'];
   };
 
-  // Восстанавливаем состояние авторизации при инициализации
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('auth_token');
       
       if (token) {
         try {
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const user = await authApi.validateToken();
           setUser(user);
         } catch (error) {
           console.error('Failed to restore auth state:', error);
           localStorage.removeItem('auth_token');
+          delete api.defaults.headers.common['Authorization'];
         }
       }
       setIsInitialized(true);

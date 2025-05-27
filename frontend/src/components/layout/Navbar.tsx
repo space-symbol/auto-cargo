@@ -65,6 +65,19 @@ export default function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link to="/my-requests">Мои заявки</Link>
                 </DropdownMenuItem>
+                {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/requests">Заявки</Link>
+                    </DropdownMenuItem>
+                    {user?.role === 'ADMIN' && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/statistics">Статистика</Link>
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
                   Выйти
@@ -115,6 +128,18 @@ export default function Navbar() {
                   <Link to="/profile" className="block px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
                     Профиль
                   </Link>
+                  {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
+                    <>
+                      <Link to="/admin/requests" className="block px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                        Заявки
+                      </Link>
+                      {user?.role === 'ADMIN' && (
+                        <Link to="/admin/statistics" className="block px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                          Статистика
+                        </Link>
+                      )}
+                    </>
+                  )}
                   <Button variant="outline" className="w-full justify-center" onClick={() => {
                     logout();
                     setMobileMenuOpen(false);

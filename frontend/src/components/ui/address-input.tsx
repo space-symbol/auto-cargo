@@ -5,16 +5,18 @@ import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useYandexMaps } from '@/hooks/useYandexMaps';
+import { Address } from '@/types/api';
 
 interface AddressSuggestion {
   value: string;
   displayName: string;
   coordinates: [number, number];
+  address: Address;
 }
 
 interface AddressInputProps {
   value: string;
-  onChange: (value: string, coordinates?: [number, number]) => void;
+  onChange: (value: string, address?: Address) => void;
   placeholder?: string;
   className?: string;
   error?: boolean;
@@ -61,17 +63,29 @@ export function AddressInput({ value = '', onChange, placeholder, className, err
           results: 5,
           kind: 'locality,street,house',
         });
-
         const results: AddressSuggestion[] = [];
         geocoder.geoObjects.each((geoObject) => {
           const address = geoObject.getAddressLine();
           const coords = geoObject.geometry?.getCoordinates();
+          const components = geoObject.getAddressLine().split(', ');
           
           if (address && coords && typeof address === 'string') {
+            const addressObj: Address = {
+              id: '', // ID будет присвоен на сервере
+              city: components[0] || '',
+              street: components[1] || '',
+              building: components[2] || '',
+              region: components[3] || undefined,
+              postalCode: undefined,
+              country: 'Россия',
+              createdAt: new Date().toISOString(),
+            };
+
             results.push({
               value: address,
               displayName: address,
               coordinates: coords,
+              address: addressObj,
             });
           }
         });
@@ -85,7 +99,7 @@ export function AddressInput({ value = '', onChange, placeholder, className, err
       } finally {
         if (isMounted.current) setLoading(false);
       }
-    }, 300);
+    }, 100);
   };
 
   return (
@@ -148,7 +162,7 @@ export function AddressInput({ value = '', onChange, placeholder, className, err
                     )}
                     onClick={() => {
                       setInputValue(suggestion.value);
-                      onChange(suggestion.value, suggestion.coordinates);
+                      onChange(suggestion.value, suggestion.address);
                       setOpen(false);
                     }}
                   >

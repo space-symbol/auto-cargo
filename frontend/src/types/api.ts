@@ -5,7 +5,14 @@ export interface User {
   email: string;
   phone: string;
   company?: string;
-  role: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export enum UserRole {
+  CLIENT = 'CLIENT',
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER'
 }
 
 export interface AuthResponse {
@@ -14,62 +21,149 @@ export interface AuthResponse {
 }
 
 export interface VehicleType {
-  id: number;
+  id: string;
   name: string;
-  capacity: number;
+  maxWeight: number;
+  maxVolume: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CargoType {
-  id: number;
+  id: string;
   name: string;
-  multiplier: number;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Address {
+  id: string;
+  city: string;
+  street: string;
+  building: string;
+  region?: string;
+  postalCode?: string;
+  country: string;
+  createdAt: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
+export interface Tariff {
+  id: string;
+  name: string;
+  baseRate: number;
+  weightRate: number;
+  volumeRate: number;
+  distanceRate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  vehicleTypeId: string;
+  cargoTypeId?: string;
+  vehicleType: VehicleType;
+  cargoType?: CargoType;
+}
+
+export interface CargoRequestStatusHistory {
+  id: string;
+  status: CargoRequestStatus;
+  comment?: string;
+  createdAt: string;
+  requestId: string;
 }
 
 export interface CargoRequest {
   id: string;
-  cargoType: number;
+  cargoTypeId: string;
+  cargoType: CargoType;
+  vehicleTypeId: string;
+  vehicleType: VehicleType;
   weight: number;
   volume: number;
-  from: string;
-  to: string;
-  distance: number;
-  vehicleType: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
+  distance?: number;
   status: CargoRequestStatus;
-  cost: number | null;
+  cost?: number;
   createdAt: string;
   updatedAt: string;
-  userId?: string;
+  userId: string;
+  user: User;
+  statusHistory: CargoRequestStatusHistory[];
+  tariffId?: string;
+  tariff?: Tariff;
+  baseRate: number;
+  weightRate: number;
+  volumeRate: number;
+  distanceRate: number;
+  fromAddressId: string;
+  fromAddress: Address;
+  toAddressId: string;
+  toAddress: Address;
 }
 
 export enum CargoRequestStatus {
   PENDING = 'PENDING',
-  IN_PROGRESS = 'IN_PROGRESS',
+  PROCESSING = 'PROCESSING',
+  IN_TRANSIT = 'IN_TRANSIT',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED'
 }
 
 export interface CalculateCostRequest {
-  cargoType: number;
+  cargoTypeId: string;
+  vehicleTypeId: string;
   weight: number;
   volume: number;
-  from: string;
-  to: string;
-  distance: number;
-  vehicleType: number;
+  fromAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
+  toAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
 }
 
 export interface CalculateCostResponse {
   cost: number;
+  currency: string;
   details: {
+    tariffId: string;
     baseRate: number;
+    weightRate: number;
+    volumeRate: number;
+    distanceRate: number;
     weightCost: number;
     volumeCost: number;
     distanceCost: number;
   };
+}
+
+export interface CreateCargoRequestData {
+  cargoTypeId: string;
+  vehicleTypeId: string;
+  weight: number;
+  volume: number;
+  fromAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
+  toAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
+  userId: string;
 }
 
 export interface ApiError {
@@ -80,9 +174,15 @@ export interface ApiError {
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
-  page: number;
+  currentPage: number;
   pageSize: number;
   totalPages: number;
 }
 
-export interface CargoRequestsListResponse extends PaginatedResponse<CargoRequest> {} 
+export type CargoRequestsListResponse = PaginatedResponse<CargoRequest>
+
+export interface CargoRequestFilters {
+  status?: CargoRequestStatus;
+  sortBy?: 'date' | 'cost';
+  sortOrder?: 'asc' | 'desc';
+} 

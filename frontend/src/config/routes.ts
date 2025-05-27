@@ -3,7 +3,9 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   CARGO_REQUEST: '/cargo-request',
+  CARGO_REQUEST_SUBMISSION: '/cargo-request-submission',
   PROFILE: '/profile',
+  MY_REQUESTS: '/my-requests'
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

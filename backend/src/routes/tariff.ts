@@ -13,6 +13,8 @@ interface CreateTariffBody {
   weightRate: number;
   volumeRate: number;
   distanceRate: number;
+  vehicleTypeId: string;
+  cargoTypeId?: string;
 }
 
 interface UpdateTariffBody {
@@ -22,6 +24,8 @@ interface UpdateTariffBody {
   volumeRate?: number;
   distanceRate?: number;
   isActive?: boolean;
+  vehicleTypeId?: string;
+  cargoTypeId?: string;
 }
 
 export default async function tariffRoutes(fastify: FastifyInstance) {
@@ -55,13 +59,15 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['name', 'baseRate', 'weightRate', 'volumeRate', 'distanceRate'],
+        required: ['name', 'baseRate', 'weightRate', 'volumeRate', 'distanceRate', 'vehicleTypeId'],
         properties: {
           name: { type: 'string' },
           baseRate: { type: 'number', minimum: 0 },
           weightRate: { type: 'number', minimum: 0 },
           volumeRate: { type: 'number', minimum: 0 },
-          distanceRate: { type: 'number', minimum: 0 }
+          distanceRate: { type: 'number', minimum: 0 },
+          vehicleTypeId: { type: 'string' },
+          cargoTypeId: { type: 'string' }
         }
       }
     }
@@ -89,7 +95,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
           weightRate: { type: 'number', minimum: 0 },
           volumeRate: { type: 'number', minimum: 0 },
           distanceRate: { type: 'number', minimum: 0 },
-          isActive: { type: 'boolean' }
+          isActive: { type: 'boolean' },
+          vehicleTypeId: { type: 'string' },
+          cargoTypeId: { type: 'string' }
         }
       }
     }
@@ -104,9 +112,22 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
   });
 
   // Получение активного тарифа
-  fastify.get('/tariffs/active', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get<{
+    Querystring: { vehicleTypeId?: string; cargoTypeId?: string }
+  }>('/tariffs/active', {
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          vehicleTypeId: { type: 'string' },
+          cargoTypeId: { type: 'string' }
+        }
+      }
+    }
+  }, async (request: FastifyRequest<{ Querystring: { vehicleTypeId?: string; cargoTypeId?: string } }>, reply: FastifyReply) => {
     try {
-      const tariff = await tariffService.getActiveTariff();
+      const { vehicleTypeId, cargoTypeId } = request.query;
+      const tariff = await tariffService.getActiveTariff(vehicleTypeId, cargoTypeId);
       if (!tariff) {
         reply.code(404).send({ error: 'No active tariff found' });
         return;
@@ -124,6 +145,39 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
     try {
       const tariffs = await tariffService.getAllTariffs();
       reply.send(tariffs);
+    } catch (error: any) {
+      reply.code(400).send({ error: error.message });
+    }
+  });
+
+  // Создание тестового тарифа (только для админов)
+  fastify.post('/tariffs/default', {
+    preHandler: [authMiddleware, adminMiddleware],
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // Получаем первый тип транспорта и груза
+      const [vehicleType, cargoType] = await Promise.all([
+        prisma.vehicleType.findFirst(),
+        prisma.cargoType.findFirst()
+      ]);
+
+      if (!vehicleType || !cargoType) {
+        reply.code(400).send({ error: 'Не найдены типы транспорта или груза' });
+        return;
+      }
+
+      // Создаем базовый тариф
+      const tariff = await tariffService.createTariff({
+        name: `Базовый тариф для ${vehicleType.name} и ${cargoType.name}`,
+        baseRate: 1000, // Базовая ставка
+        weightRate: 10, // Ставка за кг
+        volumeRate: 100, // Ставка за м³
+        distanceRate: 20, // Ставка за км
+        vehicleTypeId: vehicleType.id,
+        cargoTypeId: cargoType.id
+      });
+
+      reply.code(201).send(tariff);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }

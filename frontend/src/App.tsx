@@ -1,77 +1,150 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ROUTES } from '@/config/routes';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
-import Index from './pages/Index';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import CargoRequest from './pages/CargoRequest';
-import NotFound from './pages/NotFound';
+import Index from '@/pages/Index';
+import CargoRequest from '@/pages/CargoRequest';
 import CargoRequestSubmission from '@/pages/CargoRequestSubmission';
 import Profile from '@/pages/Profile';
 import CargoRequestsList from '@/pages/CargoRequestsList';
+import NotFound from '@/pages/NotFound';
+import { CargoCalculationProvider } from '@/contexts/CargoCalculationContext';
+import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
+import { LoginPage } from '@/pages/auth/LoginPage';
+import { RegisterPage } from '@/pages/auth/RegisterPage';
+import { RequestsPage } from '@/pages/admin/RequestsPage';
+import { StatisticsPage } from '@/pages/admin/StatisticsPage';
+import { AuthWrapper } from '@/components/auth/AuthWrapper';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  roles?: string[];
+  requireAuth?: boolean;
+}
+
+function ProtectedRoute({ children, roles, requireAuth = true }: ProtectedRouteProps) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Загрузка...</div>;
+  }
+
+  if (requireAuth && !user) {
+    return <Navigate to={ROUTES.LOGIN} />;
+  }
+
+  if (roles && user && !roles.includes(user.role)) {
+    return <Navigate to={ROUTES.HOME} />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Router>
-            <Routes>
-              <Route path={ROUTES.HOME} element={<Index />} />
-              <Route path={ROUTES.LOGIN} element={
-                <Layout>
-                  <Login />
-                </Layout>
-              } />
-              <Route path={ROUTES.REGISTER} element={<Register />} />
-              <Route path={ROUTES.CARGO_REQUEST} element={<CargoRequest />} />
-              <Route 
-                path="/request-submission" 
-                element={
-                  <ProtectedRoute>
-                    <CargoRequestSubmission />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path={ROUTES.PROFILE} 
-                element={
-                  <ProtectedRoute>
+          <CargoCalculationProvider>
+            <AuthProvider>
+              <Router>
+                <Routes>
+                  <Route path={ROUTES.HOME} element={<Index />} />
+                  <Route path={ROUTES.LOGIN} element={
                     <Layout>
-                      <Profile />
+                      <AuthWrapper>
+                        <LoginPage />
+                      </AuthWrapper>
                     </Layout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/my-requests" 
-                element={
-                  <ProtectedRoute>
+                  } />
+                  <Route path={ROUTES.REGISTER} element={
                     <Layout>
-                      <CargoRequestsList />
+                      <AuthWrapper>
+                        <RegisterPage />
+                      </AuthWrapper>
                     </Layout>
-                  </ProtectedRoute>
-                } 
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster position="top-right" />
-          </Router>
+                  } />
+                  <Route
+                    path={ROUTES.CARGO_REQUEST}
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <CargoRequest />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path={ROUTES.CARGO_REQUEST_SUBMISSION}
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <CargoRequestSubmission />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path={ROUTES.PROFILE}
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <Profile />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path={ROUTES.MY_REQUESTS}
+                    element={
+                      <ProtectedRoute>
+                        <Layout>
+                          <CargoRequestsList />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Admin routes */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute roles={['ADMIN', 'MANAGER']}>
+                        <Layout>
+                          <Outlet />
+                        </Layout>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route
+                      path="requests"
+                      element={
+                        <ProtectedRoute roles={['ADMIN', 'MANAGER']}>
+                          <RequestsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="statistics"
+                      element={
+                        <ProtectedRoute roles={['ADMIN']}>
+                          <StatisticsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Route>
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                <Toaster position="top-right" />
+              </Router>
+            </AuthProvider>
+          </CargoCalculationProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

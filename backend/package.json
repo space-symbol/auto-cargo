@@ -15,6 +15,7 @@
     "@fastify/swagger-ui": "^2.0.0",
     "@prisma/client": "^5.10.2",
     "@sinclair/typebox": "^0.34.33",
+    "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "fastify": "^4.29.1",
     "jsonwebtoken": "^9.0.2"

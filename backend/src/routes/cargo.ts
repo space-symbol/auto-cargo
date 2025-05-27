@@ -1,18 +1,29 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { CargoRequestStatus } from '../generated/prisma';
+import { CargoRequestStatus, UserRole } from '../generated/prisma';
 import { CargoService } from '../services/cargo';
 import { TariffService } from '../services/tariff';
-import { verifyToken, JwtPayload } from '../utils/auth';
+import { ReferenceService } from '../services/reference';
+import { authenticate, requireRole, JwtPayload } from '../utils/auth';
 import { prisma } from '../lib/prisma';
 
 interface RequestBody {
-  cargoType: number;
+  cargoTypeId: string;
+  vehicleTypeId: string;
   weight: number;
   volume: number;
-  from: string;
-  to: string;
-  distance: number;
-  vehicleType: number;
+  distance?: number;
+  fromAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
+  toAddress: {
+    city: string;
+    street: string;
+    building: string;
+    country: string;
+  };
 }
 
 interface StatusUpdateBody {
@@ -30,7 +41,8 @@ interface AuthenticatedRequest extends FastifyRequest {
 
 export default async function cargoRoutes(fastify: FastifyInstance) {
   const tariffService = new TariffService(prisma);
-  const cargoService = new CargoService(prisma, tariffService);
+  const referenceService = new ReferenceService(prisma);
+  const cargoService = new CargoService(prisma, tariffService, referenceService);
 
   const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -50,22 +62,47 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     schema: {
       body: {
         type: 'object',
-        required: ['cargoType', 'weight', 'volume', 'from', 'to', 'distance', 'vehicleType'],
+        required: [
+          'cargoTypeId',
+          'vehicleTypeId',
+          'weight',
+          'volume',
+          'fromAddress',
+          'toAddress'
+        ],
         properties: {
-          cargoType: { type: 'number' },
+          cargoTypeId: { type: 'string' },
+          vehicleTypeId: { type: 'string' },
           weight: { type: 'number' },
           volume: { type: 'number' },
-          from: { type: 'string' },
-          to: { type: 'string' },
           distance: { type: 'number' },
-          vehicleType: { type: 'number' }
+          fromAddress: {
+            type: 'object',
+            required: ['city', 'street', 'building', 'country'],
+            properties: {
+              city: { type: 'string' },
+              street: { type: 'string' },
+              building: { type: 'string' },
+              country: { type: 'string' }
+            }
+          },
+          toAddress: {
+            type: 'object',
+            required: ['city', 'street', 'building', 'country'],
+            properties: {
+              city: { type: 'string' },
+              street: { type: 'string' },
+              building: { type: 'string' },
+              country: { type: 'string' }
+            }
+          }
         }
       }
     }
   }, async (request: FastifyRequest<{ Body: RequestBody }>, reply: FastifyReply) => {
     try {
-      const result = await cargoService.calculateCost(request.body);
-      reply.send(result);
+      const costCalculation = await cargoService.calculateCost(request.body);
+      reply.send(costCalculation);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }
@@ -73,37 +110,53 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
 
   // Создание заявки (требуется авторизация)
   fastify.post<{ Body: RequestBody }>('/requests', {
-    preHandler: authMiddleware,
+    preHandler: [authenticate],
     schema: {
       body: {
         type: 'object',
-        required: ['cargoType', 'weight', 'volume', 'from', 'to', 'distance', 'vehicleType', 'firstName', 'lastName', 'email', 'phone'],
+        required: [
+          'cargoTypeId',
+          'vehicleTypeId',
+          'weight',
+          'volume',
+          'fromAddress',
+          'toAddress'
+        ],
         properties: {
-          cargoType: { type: 'number' },
+          cargoTypeId: { type: 'string' },
+          vehicleTypeId: { type: 'string' },
           weight: { type: 'number' },
           volume: { type: 'number' },
-          from: { type: 'string' },
-          to: { type: 'string' },
           distance: { type: 'number' },
-          vehicleType: { type: 'number' },
-          firstName: { type: 'string' },
-          lastName: { type: 'string' },
-          email: { type: 'string' },
-          phone: { type: 'string' },
-          userId: { type: 'string' }
+          fromAddress: {
+            type: 'object',
+            required: ['city', 'street', 'building', 'country'],
+            properties: {
+              city: { type: 'string' },
+              street: { type: 'string' },
+              building: { type: 'string' },
+              country: { type: 'string' }
+            }
+          },
+          toAddress: {
+            type: 'object',
+            required: ['city', 'street', 'building', 'country'],
+            properties: {
+              city: { type: 'string' },
+              street: { type: 'string' },
+              building: { type: 'string' },
+              country: { type: 'string' }
+            }
+          }
         }
       }
     }
   }, async (request: FastifyRequest<{ Body: RequestBody }>, reply: FastifyReply) => {
     try {
-      const user = (request as AuthenticatedRequest).user;
+      const user = (request as any).user;
       const requestData = {
         ...request.body,
-        userId: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone
+        userId: user.id
       };
       const result = await cargoService.createRequest(requestData);
       reply.code(201).send(result);
@@ -112,52 +165,91 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Получение заявок пользователя
   fastify.get<{
-    Querystring: { page?: number; pageSize?: number }
+    Querystring: { 
+      page?: number; 
+      pageSize?: number;
+      status?: CargoRequestStatus;
+      sortBy?: 'date' | 'cost';
+      sortOrder?: 'asc' | 'desc';
+    }
   }>('/user/requests', {
-    preHandler: authMiddleware,
+    preHandler: [authenticate],
     schema: {
       querystring: {
         type: 'object',
         properties: {
           page: { type: 'number', default: 1 },
-          pageSize: { type: 'number', default: 10 }
+          pageSize: { type: 'number', default: 10 },
+          status: { type: 'string', enum: Object.values(CargoRequestStatus) },
+          sortBy: { type: 'string', enum: ['date', 'cost'] },
+          sortOrder: { type: 'string', enum: ['asc', 'desc'] }
         }
       }
     }
   }, async (request, reply) => {
     try {
-      const user = (request as AuthenticatedRequest).user;
-      const { page = 1, pageSize = 10 } = request.query;
-      const requests = await cargoService.getUserRequests(user.email, page, pageSize);
+      const user = (request as any).user;
+      const { page, pageSize, status, sortBy, sortOrder } = request.query;
+      const requests = await cargoService.getUserRequests(user.email, {
+        page,
+        pageSize,
+        status,
+        sortBy,
+        sortOrder
+      });
       reply.send(requests);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }
   });
 
-  // Получение всех заявок (для админов)
+  // Получение всех заявок (для админов и менеджеров)
   fastify.get('/admin/requests', {
-    preHandler: authMiddleware
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const user = (request as AuthenticatedRequest).user;
-      if (user.role !== 'ADMIN') {
-        throw new Error('Access denied');
+    preHandler: [authenticate, requireRole([UserRole.ADMIN, UserRole.MANAGER])],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'number', default: 1 },
+          pageSize: { type: 'number', default: 10 },
+          status: { type: 'string', enum: Object.values(CargoRequestStatus) },
+          sortBy: { type: 'string', enum: ['date', 'cost'] },
+          sortOrder: { type: 'string', enum: ['asc', 'desc'] }
+        }
       }
-      const requests = await cargoService.getAllRequests();
+    }
+  }, async (request, reply) => {
+    try {
+      const { page, pageSize, status, sortBy, sortOrder } = request.query;
+      const requests = await cargoService.getAllRequests({
+        page,
+        pageSize,
+        status,
+        sortBy,
+        sortOrder
+      });
       reply.send(requests);
     } catch (error: any) {
-      reply.code(403).send({ error: error.message });
+      reply.code(400).send({ error: error.message });
     }
   });
 
   // Получение заявки по ID
   fastify.get<{ Params: RequestParams }>('/requests/:id', {
-    preHandler: authMiddleware
+    preHandler: [authenticate],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }
+        }
+      }
+    }
   }, async (request: FastifyRequest<{ Params: RequestParams }>, reply: FastifyReply) => {
     try {
-      const user = (request as AuthenticatedRequest).user;
+      const user = (request as any).user;
       const { id } = request.params;
       const cargoRequest = await cargoService.getRequestById(id);
       
@@ -167,7 +259,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
       }
 
       // Проверяем доступ
-      if (cargoRequest.userId !== user.id && user.role !== 'ADMIN') {
+      if (cargoRequest.userId !== user.id && 
+          user.role !== UserRole.ADMIN && 
+          user.role !== UserRole.MANAGER) {
         reply.code(403).send({ error: 'Access denied' });
         return;
       }
@@ -178,12 +272,12 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Обновление статуса заявки (для админов)
+  // Обновление статуса заявки (для админов и менеджеров)
   fastify.patch<{ 
     Params: RequestParams;
     Body: StatusUpdateBody;
   }>('/admin/requests/:id/status', {
-    preHandler: authMiddleware,
+    preHandler: [authenticate, requireRole([UserRole.ADMIN, UserRole.MANAGER])],
     schema: {
       body: {
         type: 'object',
@@ -196,16 +290,32 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest<{ Params: RequestParams; Body: StatusUpdateBody }>, reply: FastifyReply) => {
     try {
-      const user = (request as AuthenticatedRequest).user;
-      if (user.role !== 'ADMIN') {
-        throw new Error('Access denied');
-      }
-
       const { id } = request.params;
       const { status, comment } = request.body;
+      const result = await cargoService.updateRequestStatus(id, status, comment);
+      reply.send(result);
+    } catch (error: any) {
+      reply.code(400).send({ error: error.message });
+    }
+  });
 
-      const updatedRequest = await cargoService.updateRequestStatus(id, status, comment);
-      reply.send(updatedRequest);
+  // Получение статистики (только для админов)
+  fastify.get('/admin/statistics', {
+    preHandler: [authenticate, requireRole([UserRole.ADMIN])],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { startDate, endDate } = request.query;
+      const statistics = await cargoService.getStatistics(startDate, endDate);
+      reply.send(statistics);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }

@@ -7,14 +7,18 @@ declare global {
 }
 
 export interface YandexMaps {
-  geocode: (query: string, options?: { results: number; kind: string }) => Promise<{
+  Map: any;
+  Placemark: any;
+  Polyline: any;
+  SuggestView: new (element: string) => {
+    search: (query: string, callback: (results: Array<{ value: string, data: any }>) => void) => void;
+    events: {
+      add: (event: string, callback: (e: { get: (key: string) => { value: string } }) => void) => void;
+    };
+  };
+  geocode: (query: string, options?: any) => Promise<{
     geoObjects: {
-      each: (callback: (geoObject: {
-        getAddressLine: () => string;
-        geometry: {
-          getCoordinates: () => [number, number];
-        };
-      }) => void) => void;
+      each: (callback: (geoObject: any) => void) => void;
     };
   }>;
   suggest: (query: string) => Promise<{
@@ -52,47 +56,25 @@ export function useYandexMaps() {
     };
 
     // Проверяем, загружен ли уже скрипт
-    const existingScript = document.querySelector('script[src*="api-maps.yandex.ru"]');
-    if (existingScript) {
-      if (window.ymaps) {
-        initializeYmaps();
-      } else {
-        // Если скрипт есть, но API еще не инициализирован, ждем его загрузки
-        const checkInterval = setInterval(() => {
-          if (window.ymaps) {
-            clearInterval(checkInterval);
-            initializeYmaps();
-          }
-        }, 100);
-
-        // Очищаем интервал через 10 секунд, если API так и не загрузился
-        setTimeout(() => {
+    if (window.ymaps) {
+      initializeYmaps();
+    } else {
+      // Если скрипт еще не загружен, ждем его загрузки
+      const checkInterval = setInterval(() => {
+        if (window.ymaps) {
           clearInterval(checkInterval);
-          if (isMounted && !window.ymaps) {
-            setError('Не удалось инициализировать Yandex Maps API');
-          }
-        }, 10000);
-      }
-      return;
+          initializeYmaps();
+        }
+      }, 100);
+
+      // Очищаем интервал через 10 секунд, если API так и не загрузился
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (isMounted && !window.ymaps) {
+          setError('Не удалось инициализировать Yandex Maps API');
+        }
+      }, 10000);
     }
-
-    const script = document.createElement('script');
-    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${import.meta.env.VITE_YANDEX_MAPS_API_KEY}&lang=ru_RU`;
-    script.async = true;
-
-    script.onload = () => {
-      if (isMounted) {
-        initializeYmaps();
-      }
-    };
-
-    script.onerror = () => {
-      if (isMounted) {
-        setError('Не удалось загрузить Yandex Maps API');
-      }
-    };
-
-    document.head.appendChild(script);
 
     return () => {
       isMounted = false;

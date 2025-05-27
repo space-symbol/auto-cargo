@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { userApi } from '@/api/api';
+import { authApi } from '@/api/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function Profile() {
   const { user: authUser } = useAuth();
@@ -15,18 +17,19 @@ export default function Profile() {
   
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['user', 'profile'],
-    queryFn: userApi.getProfile,
+    queryFn: authApi.getProfile,
+    retry: 1,
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: userApi.updateProfile,
+    mutationFn: authApi.updateProfile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
       toast.success('Профиль успешно обновлен');
       setIsEditing(false);
     },
-    onError: () => {
-      toast.error('Не удалось обновить профиль');
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Не удалось обновить профиль');
     },
   });
 
@@ -36,16 +39,17 @@ export default function Profile() {
     lastName: '',
     email: '',
     phone: '',
+    company: '',
   });
 
   React.useEffect(() => {
-    console.log('useEffect triggered with user:', user);
     if (user) {
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         email: user.email || '',
         phone: user.phone || '',
+        company: user.company || '',
       });
     }
   }, [user]);
@@ -83,12 +87,29 @@ export default function Profile() {
                 <Label>Телефон</Label>
                 <Skeleton className="h-10 w-full" />
               </div>
+              <div className="space-y-2">
+                <Label>Компания</Label>
+                <Skeleton className="h-10 w-full" />
+              </div>
               <div className="flex justify-end">
                 <Skeleton className="h-10 w-32" />
               </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error instanceof Error ? error.message : 'Не удалось загрузить профиль'}
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -110,6 +131,7 @@ export default function Profile() {
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                   disabled={!isEditing}
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -119,6 +141,7 @@ export default function Profile() {
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                   disabled={!isEditing}
+                  required
                 />
               </div>
             </div>
@@ -130,6 +153,7 @@ export default function Profile() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 disabled={!isEditing}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -138,6 +162,16 @@ export default function Profile() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={!isEditing}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company">Компания</Label>
+              <Input
+                id="company"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 disabled={!isEditing}
               />
             </div>

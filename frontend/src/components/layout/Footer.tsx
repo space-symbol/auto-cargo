@@ -1,7 +1,4 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-
 export default function Footer() {
   return (
     <footer className="bg-company-dark text-white py-10">
@@ -20,26 +17,7 @@ export default function Footer() {
               Надежная транспортная компания с многолетним опытом грузоперевозок по всей России и международным направлениям.
             </p>
           </div>
-
-          <div>
-            <h3 className="text-lg font-medium mb-4 border-b border-company-primary pb-2">Контакты</h3>
-            <ul className="space-y-2">
-              <li className="text-company-light/80">
-                <span className="block text-white">Адрес:</span>
-                г. Москва, ул. Транспортная, 123
-              </li>
-              <li className="text-company-light/80">
-                <span className="block text-white">Телефон:</span>
-                +7 (495) 123-45-67
-              </li>
-              <li className="text-company-light/80">
-                <span className="block text-white">Email:</span>
-                info@transvector.ru
-              </li>
-            </ul>
-          </div>
         </div>
-        
         <div className="mt-10 pt-6 border-t border-company-primary/30 text-center text-company-light/60 text-sm">
           &copy; {new Date().getFullYear()} ООО "ТРЭНС ВЭСТОР". Все права защищены.
         </div>

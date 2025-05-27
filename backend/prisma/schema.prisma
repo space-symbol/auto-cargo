@@ -7,79 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String         @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String         @unique
-  password  String
-  phone     String
-  company   String?
-  role      UserRole       @default(CLIENT)
-  createdAt DateTime       @default(now())
-  requests  CargoRequest[]
-}
-
-model CargoRequest {
-  id            String                      @id @default(uuid())
-  cargoType     String
-  weight        Float
-  volume        Float
-  from          String
-  to            String
-  distance      Float?
-  vehicleType   String
-  firstName     String
-  lastName      String
-  email         String
-  phone         String
-  status        CargoRequestStatus          @default(PENDING)
-  cost          Float?
-  createdAt     DateTime                    @default(now())
-  updatedAt     DateTime                    @updatedAt
-  userId        String?
-  user          User?                       @relation(fields: [userId], references: [id])
-  statusHistory CargoRequestStatusHistory[]
-}
-
-model CargoRequestStatusHistory {
-  id        String             @id @default(uuid())
-  status    CargoRequestStatus
-  comment   String?
-  createdAt DateTime           @default(now())
-  requestId String
-  request   CargoRequest       @relation(fields: [requestId], references: [id])
-}
-
-model Tariff {
-  id           String   @id @default(uuid())
-  name         String   @unique
-  baseRate     Float // Базовая ставка
-  weightRate   Float // Ставка за кг
-  volumeRate   Float // Ставка за м³
-  distanceRate Float // Ставка за км
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model VehicleType {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  maxWeight Float
-  maxVolume Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model CargoType {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
 enum UserRole {
   CLIENT
   ADMIN
@@ -92,4 +19,120 @@ enum CargoRequestStatus {
   IN_TRANSIT
   COMPLETED
   CANCELLED
+}
+
+model User {
+  id         String         @id @default(uuid())
+  firstName  String
+  lastName   String
+  email      String         @unique
+  password   String
+  phone      String
+  company    String?
+  role       UserRole       @default(CLIENT)
+  createdAt  DateTime       @default(now())
+  requests   CargoRequest[]
+  
+  @@index([email])
+  @@index([createdAt])
+}
+
+model CargoRequest {
+  id              String           @id @default(uuid())
+  cargoTypeId     String
+  cargoType       CargoType        @relation(fields: [cargoTypeId], references: [id])
+  vehicleTypeId   String
+  vehicleType     VehicleType      @relation(fields: [vehicleTypeId], references: [id])
+  weight          Float
+  volume          Float
+  distance        Float?
+  status          CargoRequestStatus @default(PENDING)
+  cost            Float?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  userId          String?
+  user            User?            @relation(fields: [userId], references: [id])
+  statusHistory   CargoRequestStatusHistory[]
+  tariffId        String?
+  tariff          Tariff?          @relation(fields: [tariffId], references: [id])
+  baseRate        Float
+  weightRate      Float
+  volumeRate      Float
+  distanceRate    Float
+  fromAddressId   String
+  fromAddress     Address          @relation("FromAddress", fields: [fromAddressId], references: [id])
+  toAddressId     String
+  toAddress       Address          @relation("ToAddress", fields: [toAddressId], references: [id])
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([vehicleTypeId])
+}
+
+model CargoRequestStatusHistory {
+  id         String             @id @default(uuid())
+  status     CargoRequestStatus
+  comment    String?
+  createdAt  DateTime           @default(now())
+  requestId  String
+  request    CargoRequest       @relation(fields: [requestId], references: [id])
+  
+  @@index([requestId])
+}
+
+model Tariff {
+  id            String      @id @default(uuid())
+  name          String      @unique
+  baseRate      Float
+  weightRate    Float
+  volumeRate    Float
+  distanceRate  Float
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  vehicleTypeId String
+  vehicleType   VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  cargoTypeId   String?
+  cargoType     CargoType?  @relation(fields: [cargoTypeId], references: [id])
+  requests      CargoRequest[]
+
+  @@index([vehicleTypeId])
+  @@index([cargoTypeId])
+}
+
+model VehicleType {
+  id         String         @id @default(uuid())
+  name       String         @unique
+  maxWeight  Float
+  maxVolume  Float
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  tariffs    Tariff[]
+  requests   CargoRequest[]
+}
+
+model CargoType {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  description String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tariffs     Tariff[]
+  requests    CargoRequest[]
+}
+
+model Address {
+  id          String         @id @default(uuid())
+  city        String
+  street      String
+  building    String
+  region      String?
+  postalCode  String?
+  country     String         @default("Россия")
+  createdAt   DateTime       @default(now())
+  fromRequests CargoRequest[] @relation("FromAddress")
+  toRequests   CargoRequest[] @relation("ToAddress")
+
+  @@unique([city, street, building, postalCode])
 }
