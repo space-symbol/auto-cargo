@@ -21,6 +21,8 @@ interface CreateCargoRequestData {
     building: string;
     country: string;
   };
+  transportationDate: string;
+  transportationTime: string;
 }
 
 type CargoRequestWithRelations = Prisma.CargoRequestGetPayload<{
@@ -82,6 +84,8 @@ export class CargoService {
       building: string;
       country: string;
     };
+    transportationDate: string;
+    transportationTime: string;
   }) {
     console.log('Received cost calculation request with data:', {
       fromAddress: data.fromAddress,
@@ -89,7 +93,9 @@ export class CargoService {
       cargoTypeId: data.cargoTypeId,
       vehicleTypeId: data.vehicleTypeId,
       weight: data.weight,
-      volume: data.volume
+      volume: data.volume,
+      transportationDate: data.transportationDate,
+      transportationTime: data.transportationTime
     });
 
     const tariff = await this.tariffService.getActiveTariff(data.vehicleTypeId, data.cargoTypeId);
@@ -149,6 +155,8 @@ export class CargoService {
         weightRate: tariff.weightRate,
         volumeRate: tariff.volumeRate,
         distanceRate: tariff.distanceRate,
+        transportationDate: new Date(data.transportationDate),
+        transportationTime: data.transportationTime,
         statusHistory: {
           create: {
             status: CargoRequestStatus.PENDING,

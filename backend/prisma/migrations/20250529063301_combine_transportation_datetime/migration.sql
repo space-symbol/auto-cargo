@@ -26,19 +26,20 @@ CREATE TABLE "CargoRequest" (
     "vehicleTypeId" TEXT NOT NULL,
     "weight" DOUBLE PRECISION NOT NULL,
     "volume" DOUBLE PRECISION NOT NULL,
-    "distance" DOUBLE PRECISION,
-    "status" "CargoRequestStatus" NOT NULL DEFAULT 'PENDING',
-    "cost" DOUBLE PRECISION,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "userId" TEXT,
-    "tariffId" TEXT,
+    "distance" DOUBLE PRECISION NOT NULL,
+    "status" "CargoRequestStatus" NOT NULL,
+    "cost" DOUBLE PRECISION NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tariffId" TEXT NOT NULL,
     "baseRate" DOUBLE PRECISION NOT NULL,
     "weightRate" DOUBLE PRECISION NOT NULL,
     "volumeRate" DOUBLE PRECISION NOT NULL,
     "distanceRate" DOUBLE PRECISION NOT NULL,
     "fromAddressId" TEXT NOT NULL,
     "toAddressId" TEXT NOT NULL,
+    "transportationDateTime" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "CargoRequest_pkey" PRIMARY KEY ("id")
 );
@@ -65,8 +66,6 @@ CREATE TABLE "Tariff" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "vehicleTypeId" TEXT NOT NULL,
-    "cargoTypeId" TEXT,
 
     CONSTRAINT "Tariff_pkey" PRIMARY KEY ("id")
 );
@@ -108,6 +107,24 @@ CREATE TABLE "Address" (
     CONSTRAINT "Address_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "VehicleTypeOnTariff" (
+    "vehicleTypeId" TEXT NOT NULL,
+    "tariffId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "VehicleTypeOnTariff_pkey" PRIMARY KEY ("vehicleTypeId","tariffId")
+);
+
+-- CreateTable
+CREATE TABLE "CargoTypeOnTariff" (
+    "cargoTypeId" TEXT NOT NULL,
+    "tariffId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CargoTypeOnTariff_pkey" PRIMARY KEY ("cargoTypeId","tariffId")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -136,10 +153,7 @@ CREATE INDEX "CargoRequestStatusHistory_requestId_idx" ON "CargoRequestStatusHis
 CREATE UNIQUE INDEX "Tariff_name_key" ON "Tariff"("name");
 
 -- CreateIndex
-CREATE INDEX "Tariff_vehicleTypeId_idx" ON "Tariff"("vehicleTypeId");
-
--- CreateIndex
-CREATE INDEX "Tariff_cargoTypeId_idx" ON "Tariff"("cargoTypeId");
+CREATE INDEX "Tariff_isActive_idx" ON "Tariff"("isActive");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VehicleType_name_key" ON "VehicleType"("name");
@@ -150,6 +164,21 @@ CREATE UNIQUE INDEX "CargoType_name_key" ON "CargoType"("name");
 -- CreateIndex
 CREATE UNIQUE INDEX "Address_city_street_building_postalCode_key" ON "Address"("city", "street", "building", "postalCode");
 
+-- CreateIndex
+CREATE INDEX "VehicleTypeOnTariff_vehicleTypeId_idx" ON "VehicleTypeOnTariff"("vehicleTypeId");
+
+-- CreateIndex
+CREATE INDEX "VehicleTypeOnTariff_tariffId_idx" ON "VehicleTypeOnTariff"("tariffId");
+
+-- CreateIndex
+CREATE INDEX "CargoTypeOnTariff_cargoTypeId_idx" ON "CargoTypeOnTariff"("cargoTypeId");
+
+-- CreateIndex
+CREATE INDEX "CargoTypeOnTariff_tariffId_idx" ON "CargoTypeOnTariff"("tariffId");
+
+-- AddForeignKey
+ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
 -- AddForeignKey
 ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_cargoTypeId_fkey" FOREIGN KEY ("cargoTypeId") REFERENCES "CargoType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -157,10 +186,7 @@ ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_cargoTypeId_fkey" FOREIG
 ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_vehicleTypeId_fkey" FOREIGN KEY ("vehicleTypeId") REFERENCES "VehicleType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_tariffId_fkey" FOREIGN KEY ("tariffId") REFERENCES "Tariff"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_tariffId_fkey" FOREIGN KEY ("tariffId") REFERENCES "Tariff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_fromAddressId_fkey" FOREIGN KEY ("fromAddressId") REFERENCES "Address"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -172,7 +198,13 @@ ALTER TABLE "CargoRequest" ADD CONSTRAINT "CargoRequest_toAddressId_fkey" FOREIG
 ALTER TABLE "CargoRequestStatusHistory" ADD CONSTRAINT "CargoRequestStatusHistory_requestId_fkey" FOREIGN KEY ("requestId") REFERENCES "CargoRequest"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Tariff" ADD CONSTRAINT "Tariff_vehicleTypeId_fkey" FOREIGN KEY ("vehicleTypeId") REFERENCES "VehicleType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "VehicleTypeOnTariff" ADD CONSTRAINT "VehicleTypeOnTariff_vehicleTypeId_fkey" FOREIGN KEY ("vehicleTypeId") REFERENCES "VehicleType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Tariff" ADD CONSTRAINT "Tariff_cargoTypeId_fkey" FOREIGN KEY ("cargoTypeId") REFERENCES "CargoType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "VehicleTypeOnTariff" ADD CONSTRAINT "VehicleTypeOnTariff_tariffId_fkey" FOREIGN KEY ("tariffId") REFERENCES "Tariff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CargoTypeOnTariff" ADD CONSTRAINT "CargoTypeOnTariff_cargoTypeId_fkey" FOREIGN KEY ("cargoTypeId") REFERENCES "CargoType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CargoTypeOnTariff" ADD CONSTRAINT "CargoTypeOnTariff_tariffId_fkey" FOREIGN KEY ("tariffId") REFERENCES "Tariff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -153,12 +153,25 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
   });
 
   // Получение всех тарифов (только для админов)
-  fastify.get('/tariffs', {
-    preHandler: [authMiddleware, adminMiddleware]
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get<{
+    Querystring: { page?: string; limit?: string }
+  }>('/tariffs', {
+    preHandler: [authMiddleware, adminMiddleware],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'string', pattern: '^[1-9]\\d*$' },
+          limit: { type: 'string', pattern: '^[1-9]\\d*$' }
+        }
+      }
+    }
+  }, async (request: FastifyRequest<{ Querystring: { page?: string; limit?: string } }>, reply: FastifyReply) => {
     try {
-      const tariffs = await tariffService.getAllTariffs();
-      reply.send(tariffs);
+      const page = request.query.page ? parseInt(request.query.page) : 1;
+      const limit = request.query.limit ? parseInt(request.query.limit) : 10;
+      const result = await tariffService.getAllTariffs(page, limit);
+      reply.send(result);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }
@@ -193,6 +206,31 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
 
       reply.code(201).send(tariff);
     } catch (error: any) {
+      reply.code(400).send({ error: error.message });
+    }
+  });
+
+  // Удаление тарифа (только для админов)
+  fastify.delete<{ Params: { id: string } }>('/tariffs/:id', {
+    preHandler: [authMiddleware, adminMiddleware],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      }
+    }
+  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    try {
+      await tariffService.deleteTariff(request.params.id);
+      reply.code(204).send();
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        reply.code(404).send({ error: 'Тариф не найден' });
+        return;
+      }
       reply.code(400).send({ error: error.message });
     }
   });

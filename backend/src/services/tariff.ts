@@ -228,8 +228,13 @@ export class TariffService {
     });
   }
 
-  async getAllTariffs() {
-    return this.prisma.tariff.findMany({
+  async getAllTariffs(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [tariffs, total] = await Promise.all([
+      this.prisma.tariff.findMany({
+        skip,
+        take: limit,
       include: {
         vehicleTypes: {
           include: {
@@ -243,6 +248,35 @@ export class TariffService {
         }
       },
       orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.tariff.count()
+    ]);
+
+    return {
+      tariffs,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async deleteTariff(id: string) {
+    // Сначала удаляем все связи
+    await Promise.all([
+      this.prisma.vehicleTypeOnTariff.deleteMany({
+        where: { tariffId: id }
+      }),
+      this.prisma.cargoTypeOnTariff.deleteMany({
+        where: { tariffId: id }
+      })
+    ]);
+
+    // Затем удаляем сам тариф
+    return this.prisma.tariff.delete({
+      where: { id }
     });
   }
 } 

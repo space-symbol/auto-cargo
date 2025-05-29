@@ -21,6 +21,8 @@ import { RequestsPage } from '@/pages/admin/RequestsPage';
 import { StatisticsPage } from '@/pages/admin/StatisticsPage';
 import { AuthWrapper } from '@/components/auth/AuthWrapper';
 import { TariffsPage } from '@/pages/admin/TariffsPage';
+import Reports from '@/pages/admin/Reports';
+import { UsersPage } from '@/pages/admin/UsersPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -143,6 +145,22 @@ function App() {
                       element={
                         <ProtectedRoute roles={['ADMIN']}>
                           <TariffsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="reports"
+                      element={
+                        <ProtectedRoute roles={['ADMIN']}>
+                          <Reports />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="users"
+                      element={
+                        <ProtectedRoute roles={['ADMIN']}>
+                          <UsersPage />
                         </ProtectedRoute>
                       }
                     />

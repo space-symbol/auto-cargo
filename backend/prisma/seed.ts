@@ -9,7 +9,15 @@ async function main() {
   // Клиент
   const clientUser = await prisma.user.upsert({
     where: { email: 'client@example.com' },
-    update: {},
+    update: {
+      email: 'client@example.com',
+      password: hashedPassword,
+      firstName: 'Иван',
+      lastName: 'Иванов',
+      phone: '+79001234567',
+      company: 'ООО "Клиент"',
+      role: UserRole.CLIENT
+    },
     create: {
       email: 'client@example.com',
       password: hashedPassword,
@@ -24,7 +32,15 @@ async function main() {
   // Менеджер
   const managerUser = await prisma.user.upsert({
     where: { email: 'manager@example.com' },
-    update: {},
+    update: {
+      email: 'manager@example.com',
+      password: hashedPassword,
+      firstName: 'Петр',
+      lastName: 'Петров',
+      phone: '+79001234568',
+      company: 'ООО "Трансвестор"',
+      role: UserRole.MANAGER
+    },
     create: {
       email: 'manager@example.com',
       password: hashedPassword,
@@ -39,12 +55,20 @@ async function main() {
   // Администратор
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
-    update: {},
+    update: {
+      email: 'admin@example.com',
+      password: hashedPassword,
+      firstName: 'Диана',
+      lastName: 'Бектенова',
+      phone: '+79001234569',
+      company: 'ООО "Трансвестор"',
+      role: UserRole.ADMIN
+    },
     create: {
       email: 'admin@example.com',
       password: hashedPassword,
-      firstName: 'Алексей',
-      lastName: 'Алексеев',
+      firstName: 'Диана',
+      lastName: 'Бектенова',
       phone: '+79001234569',
       company: 'ООО "Трансвестор"',
       role: UserRole.ADMIN
@@ -128,7 +152,25 @@ async function main() {
         where: {
           name: `Тариф ${vehicleType.name} - ${cargoType.name}`
         },
-        update: {},
+        update: {
+          baseRate: baseRates[vehicleType.name] * multiplier,
+          weightRate: weightRates[vehicleType.name] * multiplier,
+          volumeRate: volumeRates[vehicleType.name] * multiplier,
+          distanceRate: distanceRates[vehicleType.name] * multiplier,
+          isActive: true,
+          vehicleTypes: {
+            deleteMany: {},
+            create: {
+              vehicleTypeId: vehicleType.id
+            }
+          },
+          cargoTypes: {
+            deleteMany: {},
+            create: {
+              cargoTypeId: cargoType.id
+            }
+          }
+        },
         create: {
           name: `Тариф ${vehicleType.name} - ${cargoType.name}`,
           baseRate: baseRates[vehicleType.name] * multiplier,
@@ -233,6 +275,7 @@ async function main() {
         distanceRate: tariff.distanceRate,
         fromAddressId: fromAddress.id,
         toAddressId: toAddress.id,
+        transportationDateTime: new Date('2024-05-29T12:00:00Z'),
         statusHistory: {
           create: {
             status: CargoRequestStatus.PENDING,

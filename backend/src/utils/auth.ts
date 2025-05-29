@@ -39,11 +39,11 @@ export const authenticate = async (request: FastifyRequest, reply: FastifyReply)
   }
 };
 
-export const requireRole = (roles: UserRole[]) => {
+export const requireRole = (allowedRoles: UserRole[]) => {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const user = (request as any).user;
-      if (!user || !roles.includes(user.role)) {
+      if (!user || !allowedRoles.includes(user.role)) {
         throw new Error('Access denied');
       }
     } catch (error) {

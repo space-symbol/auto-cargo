@@ -71,13 +71,7 @@ npm run dev
 - Фронтенд будет доступен по адресу: http://localhost:5173
 - Swagger документация API: http://localhost:3000/documentation
 
-## Запуск с Docker
 
-Для запуска всего проекта с помощью Docker:
-
-```bash
-docker-compose up
-```
 
 ## Документация
 

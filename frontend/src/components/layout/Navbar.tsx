@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, BarChart3, FileText, Settings, LogOut } from 'lucide-react';
+import { Menu, X, User, BarChart3, FileText, Settings, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/config/routes';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -90,6 +90,18 @@ export default function Navbar() {
                             <span>Тарифы</span>
                           </Link>
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin/reports" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Отчеты</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin/users" className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Пользователи</span>
+                          </Link>
+                        </DropdownMenuItem>
                       </>
                     )}
                   </>
@@ -163,6 +175,14 @@ export default function Navbar() {
                           <Link to="/admin/tariffs" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
                             <Settings className="h-4 w-4" />
                             <span>Тарифы</span>
+                          </Link>
+                          <Link to="/admin/reports" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                            <FileText className="h-4 w-4" />
+                            <span>Отчеты</span>
+                          </Link>
+                          <Link to="/admin/users" className="flex items-center gap-2 px-3 py-2 text-base font-medium hover:bg-muted rounded-md" onClick={() => setMobileMenuOpen(false)}>
+                            <Users className="h-4 w-4" />
+                            <span>Пользователи</span>
                           </Link>
                         </>
                       )}

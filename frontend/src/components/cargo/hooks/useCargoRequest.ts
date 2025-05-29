@@ -52,6 +52,7 @@ export const useCargoRequest = ({ formData, toast }: UseCargoRequestProps) => {
           building: formData.toBuilding,
           country: 'Россия'
         },
+        transportationDateTime: formData.transportationDateTime,
         userId: user.id
       });
 

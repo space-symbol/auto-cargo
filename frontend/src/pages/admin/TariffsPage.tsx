@@ -7,15 +7,33 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { api } from '@/lib/api';
 import { Tariff } from '@/types/api';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { TariffForm } from '@/components/admin/TariffForm';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface PaginatedResponse {
+  tariffs: Tariff[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
 
 export function TariffsPage() {
   const { user } = useAuth();
@@ -25,6 +43,12 @@ export function TariffsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tariffToDelete, setTariffToDelete] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     if (!user || user.role !== 'ADMIN') {
@@ -32,13 +56,15 @@ export function TariffsPage() {
       return;
     }
     fetchTariffs();
-  }, [user]);
+  }, [user, currentPage, pageSize]);
 
   const fetchTariffs = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/tariffs');
-      setTariffs(response.data);
+      const response = await api.get<PaginatedResponse>(`/tariffs?page=${currentPage}&limit=${pageSize}`);
+      setTariffs(response.data.tariffs);
+      setTotalPages(response.data.pagination.totalPages);
+      setTotalItems(response.data.pagination.total);
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -55,9 +81,16 @@ export function TariffsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (tariffId: string) => {
+  const handleDeleteClick = (tariffId: string) => {
+    setTariffToDelete(tariffId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!tariffToDelete) return;
+
     try {
-      await api.delete(`/tariffs/${tariffId}`);
+      await api.delete(`/tariffs/${tariffToDelete}`);
       toast({
         title: "Успех",
         description: "Тариф успешно удален",
@@ -69,6 +102,9 @@ export function TariffsPage() {
         description: "Не удалось удалить тариф",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setTariffToDelete(null);
     }
   };
 
@@ -103,6 +139,15 @@ export function TariffsPage() {
     }
   };
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handlePageSizeChange = (newSize: string) => {
+    setPageSize(Number(newSize));
+    setCurrentPage(1); // Сбрасываем на первую страницу при изменении размера
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -130,8 +175,52 @@ export function TariffsPage() {
           <TariffsList
             tariffs={tariffs}
             onEdit={handleEdit}
-            onDelete={handleDelete}
+            onDelete={handleDeleteClick}
           />
+          
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Показано {tariffs.length} из {totalItems}
+              </span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={handlePageSizeChange}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm">
+                Страница {currentPage} из {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -152,6 +241,25 @@ export function TariffsPage() {
             onSubmit={handleSubmit}
             onCancel={() => setIsDialogOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Подтверждение удаления</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить этот тариф? Это действие нельзя отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

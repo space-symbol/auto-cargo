@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient, UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { generateToken, JwtPayload } from '../utils/auth';
 
@@ -152,5 +152,95 @@ export class UserService {
       company: user.company,
       role: user.role
     };
+  }
+
+  async getUsers(params: {
+    page: number;
+    limit: number;
+    search?: string;
+    role?: UserRole;
+  }) {
+    const { page, limit, search, role } = params;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.UserWhereInput = {
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { phone: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { company: { contains: search, mode: Prisma.QueryMode.insensitive } }
+        ]
+      }),
+      ...(role && { role })
+    };
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          company: true,
+          role: true,
+          createdAt: true
+        }
+      }),
+      this.prisma.user.count({ where })
+    ]);
+
+    return {
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async updateUser(userId: string, data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    role?: UserRole;
+  }) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        role: data.role
+      }
+    });
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone,
+      company: user.company,
+      role: user.role
+    };
+  }
+
+  async deleteUser(userId: string) {
+    await this.prisma.user.delete({
+      where: { id: userId }
+    });
   }
 } 

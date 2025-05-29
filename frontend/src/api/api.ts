@@ -36,8 +36,15 @@ api.interceptors.response.use(
   (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
-      const currentPath = window.location.pathname;
-      window.location.href = `/login?from=${encodeURIComponent(currentPath)}`;
+      error.message = 'Неверный email или пароль';
+    } else if (error.response?.status === 403) {
+      error.message = 'Нет доступа';
+    } else if (error.response?.status === 404) {
+      error.message = 'Запрашиваемый ресурс не найден';
+    } else if (error.response?.status === 500) {
+      error.message = 'Внутренняя ошибка сервера';
+    } else if (!error.response) {
+      error.message = 'Нет соединения с сервером';
     }
     return Promise.reject(error);
   }
@@ -92,13 +99,15 @@ export const cargoApi = {
   updateRequestStatus: (id: string, status: CargoRequestStatus, comment?: string) =>
     api.patch<CargoRequest>(`/cargo/admin/requests/${id}/status`, { status, comment }).then(res => res.data),
   
-  cancelRequest: (id: string) =>
-    api.patch<CargoRequest>(`/cargo/requests/${id}/cancel`).then(res => res.data),
-
   getAllRequests: (page = 1, pageSize = 10, filters?: CargoRequestFilters) =>
     api.get<CargoRequestsListResponse>('/cargo/admin/requests', {
       params: { page, pageSize, ...filters }
     }).then(res => res.data),
+
+  async cancelRequest(requestId: string): Promise<CargoRequest> {
+    const response = await api.post<CargoRequest>(`/cargo/requests/${requestId}/cancel`);
+    return response.data;
+  },
 };
 
 export interface CargoRequestsListResponse {

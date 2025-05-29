@@ -38,31 +38,32 @@ model User {
 }
 
 model CargoRequest {
-  id              String           @id @default(uuid())
-  cargoTypeId     String
-  cargoType       CargoType        @relation(fields: [cargoTypeId], references: [id])
-  vehicleTypeId   String
-  vehicleType     VehicleType      @relation(fields: [vehicleTypeId], references: [id])
-  weight          Float
-  volume          Float
-  distance        Float?
-  status          CargoRequestStatus @default(PENDING)
-  cost            Float?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  userId          String?
-  user            User?            @relation(fields: [userId], references: [id])
-  statusHistory   CargoRequestStatusHistory[]
-  tariffId        String?
-  tariff          Tariff?          @relation(fields: [tariffId], references: [id])
-  baseRate        Float
-  weightRate      Float
-  volumeRate      Float
-  distanceRate    Float
-  fromAddressId   String
-  fromAddress     Address          @relation("FromAddress", fields: [fromAddressId], references: [id])
-  toAddressId     String
-  toAddress       Address          @relation("ToAddress", fields: [toAddressId], references: [id])
+  id                String            @id @default(uuid())
+  cargoTypeId       String
+  vehicleTypeId     String
+  weight            Float
+  volume            Float
+  distance          Float
+  status            CargoRequestStatus
+  cost              Float
+  userId            String
+  tariffId          String
+  baseRate          Float
+  weightRate        Float
+  volumeRate        Float
+  distanceRate      Float
+  fromAddressId     String
+  toAddressId       String
+  transportationDateTime DateTime
+  statusHistory     CargoRequestStatusHistory[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id])
+  cargoType         CargoType         @relation(fields: [cargoTypeId], references: [id])
+  vehicleType       VehicleType       @relation(fields: [vehicleTypeId], references: [id])
+  tariff            Tariff            @relation(fields: [tariffId], references: [id])
+  fromAddress       Address           @relation("FromAddress", fields: [fromAddressId], references: [id])
+  toAddress         Address           @relation("ToAddress", fields: [toAddressId], references: [id])
 
   @@index([status])
   @@index([userId])

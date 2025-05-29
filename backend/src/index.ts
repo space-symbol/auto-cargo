@@ -7,6 +7,8 @@ import authRoutes from './routes/auth';
 import cargoRoutes from './routes/cargo';
 import tariffRoutes from './routes/tariff';
 import { referenceRoutes } from './routes/reference';
+import reportRoutes from './routes/reports';
+import userManagementRoutes from './routes/user-management';
 import { ReferenceService } from './services/reference';
 import { TariffService } from './services/tariff';
 import { CargoService } from './services/cargo';
@@ -46,6 +48,8 @@ async function buildApp() {
   await app.register(cargoRoutes, { prefix: '/cargo' });
   await app.register(tariffRoutes);
   await app.register(referenceRoutes, { prefix: '/reference' });
+  await app.register(reportRoutes, { prefix: '/api' });
+  await app.register(userManagementRoutes, { prefix: '/api' });
 
   const referenceService = new ReferenceService(prisma);
   const tariffService = new TariffService(prisma);

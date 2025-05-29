@@ -11,6 +11,7 @@ import { CargoTypeSelect } from './form-sections/CargoTypeSelect';
 import { VehicleTypeSelect } from './form-sections/VehicleTypeSelect';
 import { WeightVolumeInputs } from './form-sections/WeightVolumeInputs';
 import { AddressSection } from './form-sections/AddressSection';
+import { TransportationDateTime } from './form-sections/TransportationDateTime';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { referenceApi } from '@/api/api';
@@ -26,6 +27,7 @@ const initialFormData: FormValues = {
   toCity: '',
   toStreet: '',
   toBuilding: '',
+  transportationDateTime: '',
 };
 
 export const CargoRequestForm: React.FC = () => {
@@ -103,6 +105,7 @@ export const CargoRequestForm: React.FC = () => {
     if (!formData.toCity) newErrors.toCity = 'Укажите город прибытия';
     if (!formData.toStreet) newErrors.toStreet = 'Укажите улицу прибытия';
     if (!formData.toBuilding) newErrors.toBuilding = 'Укажите здание прибытия';
+    if (!formData.transportationDateTime) newErrors.transportationDateTime = 'Укажите дату и время транспортировки';
 
     setErrors(newErrors);
 
@@ -159,6 +162,12 @@ export const CargoRequestForm: React.FC = () => {
             volumeError={errors.volume}
             vehicleTypeId={formData.vehicleTypeId}
             vehicleTypes={vehicleTypes}
+          />
+
+          <TransportationDateTime
+            value={formData.transportationDateTime}
+            onChange={(value) => setFormData(prev => ({ ...prev, transportationDateTime: value }))}
+            error={errors.transportationDateTime}
           />
 
           <AddressSection

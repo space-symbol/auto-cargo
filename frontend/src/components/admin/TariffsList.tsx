@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Table,
   TableBody,
@@ -12,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tariff } from '@/types/api';
 import { formatCurrency } from '@/lib/utils';
-import { Package, Truck, DollarSign, Edit, Trash2 } from 'lucide-react';
+import { Package, Truck, Edit, Trash2 } from 'lucide-react';
 
 interface TariffsListProps {
   tariffs: Tariff[];
@@ -52,7 +51,7 @@ export function TariffsList({ tariffs, onEdit, onDelete }: TariffsListProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 text-nowrap">
                   {tariff.cargoTypes.map(({ cargoType }) => (
                     <Badge key={cargoType.id} variant="secondary" className="flex items-center gap-1">
                       <Package className="h-3 w-3" />

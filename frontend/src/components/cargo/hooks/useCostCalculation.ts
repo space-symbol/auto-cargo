@@ -14,7 +14,7 @@ export const useCostCalculation = ({ formData, toast }: UseCostCalculationProps)
   const [isCalculating, setIsCalculating] = useState(false);
 
   const calculateCost = React.useCallback(async () => {
-    if (!formData.fromCity || !formData.toCity || !formData.weight || !formData.volume || !formData.vehicleTypeId) {
+    if (!formData.fromCity || !formData.toCity || !formData.weight || !formData.volume || !formData.vehicleTypeId || !formData.transportationDateTime) {
       toast({
         title: 'Ошибка',
         description: 'Пожалуйста, заполните все необходимые поля для расчета стоимости',
@@ -41,7 +41,8 @@ export const useCostCalculation = ({ formData, toast }: UseCostCalculationProps)
           street: formData.toStreet,
           building: formData.toBuilding,
           country: 'Россия'
-        }
+        },
+        transportationDateTime: formData.transportationDateTime
       });
       setCalculatedCost(response.cost);
     } catch (error) {

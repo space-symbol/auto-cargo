@@ -104,6 +104,7 @@ export interface CargoRequest {
   fromAddress: Address;
   toAddressId: string;
   toAddress: Address;
+  transportationDateTime: string;
 }
 
 export enum CargoRequestStatus {
@@ -131,6 +132,7 @@ export interface CalculateCostRequest {
     building: string;
     country: string;
   };
+  transportationDateTime: string;
 }
 
 export interface CalculateCostResponse {
@@ -165,6 +167,7 @@ export interface CreateCargoRequestData {
     building: string;
     country: string;
   };
+  transportationDateTime: string;
   userId: string;
 }
 

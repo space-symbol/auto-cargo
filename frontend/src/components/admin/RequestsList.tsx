@@ -118,20 +118,16 @@ export function RequestsList({
   const getAvailableStatuses = (currentStatus: CargoRequestStatus) => {
     const currentIndex = statusOrder.indexOf(currentStatus);
     
-    // Если заявка завершена, нельзя изменить статус
     if (currentStatus === CargoRequestStatus.COMPLETED) {
       return [];
     }
 
-    // Если заявка отменена, нельзя изменить статус
     if (currentStatus === CargoRequestStatus.CANCELLED) {
       return [];
     }
 
-    // Получаем все статусы, которые идут после текущего
     const nextStatuses = statusOrder.slice(currentIndex + 1);
     
-    // Добавляем возможность отмены, если заявка не завершена
     return [...nextStatuses, CargoRequestStatus.CANCELLED];
   };
 
@@ -194,12 +190,12 @@ export function RequestsList({
                     <User className="h-4 w-4 text-primary" />
                     <div>
                       <div className="text-sm">
-                        {request.user.firstName} {request.user.lastName}
+                        {request.user?.firstName || '-'} {request.user?.lastName || '-'}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {request.user.email}
+                        {request.user?.email || '-'}
                       </div>
-                      {request.user.company && (
+                      {request.user?.company && (
                         <div className="text-xs text-muted-foreground">
                           {request.user.company}
                         </div>
@@ -209,41 +205,41 @@ export function RequestsList({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{request.cargoType.name}</span>
+                    <Package className="h-4 w-4 text-primary" />
+                    <span>{request.cargoType?.name || '-'}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{request.vehicleType.name}</span>
+                    <Truck className="h-4 w-4 text-primary" />
+                    <span>{request.vehicleType?.name || '-'}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <MapPin className="h-4 w-4 text-primary" />
                     <span className="text-sm">
-                      {request.fromAddress.city}, {request.fromAddress.street}
+                      {request.fromAddress?.city || '-'}, {request.fromAddress?.street || '-'}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <MapPin className="h-4 w-4 text-primary" />
                     <span className="text-sm">
-                      {request.toAddress.city}, {request.toAddress.street}
+                      {request.toAddress?.city || '-'}, {request.toAddress?.street || '-'}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  {request.cost ? `${request.cost.toLocaleString()} ₽` : '-'}
+                  {request.cost ? formatCurrency(request.cost) : '-'}
                 </TableCell>
                 <TableCell>
                   <Badge className={`${statusColors[request.status]} text-white text-nowrap`}>
                     {statusLabels[request.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className='text-nowrap'>{formatDate(request.createdAt)}</TableCell>
+                <TableCell className="text-nowrap">{formatDate(request.createdAt)}</TableCell>
                 <TableCell>
                   {request.status !== CargoRequestStatus.COMPLETED && 
                    request.status !== CargoRequestStatus.CANCELLED ? (

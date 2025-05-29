@@ -24,6 +24,8 @@ interface RequestBody {
     building: string;
     country: string;
   };
+  transportationDate: string;
+  transportationTime: string;
 }
 
 interface StatusUpdateBody {
@@ -68,7 +70,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
           'weight',
           'volume',
           'fromAddress',
-          'toAddress'
+          'toAddress',
+          'transportationDate',
+          'transportationTime'
         ],
         properties: {
           cargoTypeId: { type: 'string' },
@@ -95,7 +99,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
               building: { type: 'string' },
               country: { type: 'string' }
             }
-          }
+          },
+          transportationDate: { type: 'string', format: 'date' },
+          transportationTime: { type: 'string', pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
         }
       }
     }
@@ -120,7 +126,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
           'weight',
           'volume',
           'fromAddress',
-          'toAddress'
+          'toAddress',
+          'transportationDate',
+          'transportationTime'
         ],
         properties: {
           cargoTypeId: { type: 'string' },
@@ -147,7 +155,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
               building: { type: 'string' },
               country: { type: 'string' }
             }
-          }
+          },
+          transportationDate: { type: 'string', format: 'date' },
+          transportationTime: { type: 'string', pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
         }
       }
     }
@@ -316,6 +326,35 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
       const { startDate, endDate } = request.query;
       const statistics = await cargoService.getStatistics(startDate, endDate);
       reply.send(statistics);
+    } catch (error: any) {
+      reply.code(400).send({ error: error.message });
+    }
+  });
+
+  // Отмена заявки
+  fastify.post<{ Params: RequestParams }>('/requests/:id/cancel', {
+    preHandler: [authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string' }
+        }
+      }
+    }
+  }, async (request: FastifyRequest<{ Params: RequestParams }>, reply: FastifyReply) => {
+    try {
+      const user = (request as any).user;
+      const { id } = request.params;
+      
+      const result = await cargoService.updateRequestStatus(
+        id,
+        CargoRequestStatus.CANCELLED,
+        'Request cancelled by user'
+      );
+      
+      reply.send(result);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
     }

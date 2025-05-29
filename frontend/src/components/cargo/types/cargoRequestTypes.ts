@@ -37,6 +37,7 @@ export interface FormValues {
   toCity: string;
   toStreet: string;
   toBuilding: string;
+  transportationDateTime: string;
 }
 
 export interface CargoTypeSelectProps {

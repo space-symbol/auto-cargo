@@ -77,6 +77,7 @@ export default function CargoRequestsList() {
   const [sortBy, setSortBy] = useState<'date' | 'cost'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedRequest, setSelectedRequest] = useState<CargoRequest | null>(null);
+  const [requestToCancel, setRequestToCancel] = useState<CargoRequest | null>(null);
   const { toast } = useToast();
   const pageSize = 10;
   const queryClient = useQueryClient();
@@ -93,9 +94,19 @@ export default function CargoRequestsList() {
   const handleCancelRequest = async (request: CargoRequest) => {
     try {
       await cargoApi.cancelRequest(request.id);
-      queryClient.invalidateQueries({ queryKey: ['userRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['cargo-requests'] });
+      toast({
+        title: "Заявка отменена",
+        description: "Заявка успешно отменена",
+      });
+      setRequestToCancel(null);
     } catch (error) {
       console.error('Failed to cancel request:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отменить заявку",
+        variant: "destructive",
+      });
     }
   };
 
@@ -202,7 +213,7 @@ export default function CargoRequestsList() {
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
-                              {request.fromAddress.city}, {request.fromAddress.street}
+                              {request.fromAddress?.city || '-'}, {request.fromAddress?.street || '-'}
                             </span>
                           </div>
                         </TableCell>
@@ -210,7 +221,7 @@ export default function CargoRequestsList() {
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">
-                              {request.toAddress.city}, {request.toAddress.street}
+                              {request.toAddress?.city || '-'}, {request.toAddress?.street || '-'}
                             </span>
                           </div>
                         </TableCell>
@@ -232,9 +243,8 @@ export default function CargoRequestsList() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCancelRequest(request);
+                                setRequestToCancel(request);
                               }}
-                              disabled={request.status !== CargoRequestStatus.PENDING}
                             >
                               Отменить
                             </Button>
@@ -300,21 +310,21 @@ export default function CargoRequestsList() {
                     <Package className="h-4 w-4" />
                     <span>Тип груза</span>
                   </div>
-                  <div className="font-medium">{selectedRequest.cargoType.name}</div>
+                  <div className="font-medium">{selectedRequest.cargoType?.name || '-'}</div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Truck className="h-4 w-4" />
                     <span>Тип транспорта</span>
                   </div>
-                  <div className="font-medium">{selectedRequest.vehicleType.name}</div>
+                  <div className="font-medium">{selectedRequest.vehicleType?.name || '-'}</div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
                     <span>Стоимость</span>
                   </div>
-                  <div className="font-medium">{selectedRequest.cost ?? 'Не рассчитана'} ₽</div>
+                  <div className="font-medium">{selectedRequest.cost ? `${selectedRequest.cost.toLocaleString()} ₽` : 'Не рассчитана'}</div>
                 </div>
               </div>
 
@@ -325,7 +335,9 @@ export default function CargoRequestsList() {
                     <span>Адрес отправления</span>
                   </div>
                   <div className="font-medium">
-                    {selectedRequest.fromAddress.city}, {selectedRequest.fromAddress.street}, {selectedRequest.fromAddress.building}
+                    {selectedRequest.fromAddress ? 
+                      `${selectedRequest.fromAddress.city}, ${selectedRequest.fromAddress.street}, ${selectedRequest.fromAddress.building}` : 
+                      '-'}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -334,7 +346,9 @@ export default function CargoRequestsList() {
                     <span>Адрес назначения</span>
                   </div>
                   <div className="font-medium">
-                    {selectedRequest.toAddress.city}, {selectedRequest.toAddress.street}, {selectedRequest.toAddress.building}
+                    {selectedRequest.toAddress ? 
+                      `${selectedRequest.toAddress.city}, ${selectedRequest.toAddress.street}, ${selectedRequest.toAddress.building}` : 
+                      '-'}
                   </div>
                 </div>
               </div>
@@ -382,6 +396,29 @@ export default function CargoRequestsList() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог подтверждения отмены */}
+      <Dialog open={!!requestToCancel} onOpenChange={() => setRequestToCancel(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Отмена заявки</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите отменить эту заявку? Это действие нельзя будет отменить.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button variant="outline" onClick={() => setRequestToCancel(null)}>
+              Нет, оставить
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => requestToCancel && handleCancelRequest(requestToCancel)}
+            >
+              Да, отменить
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
