@@ -19,7 +19,7 @@ export default function Reports() {
   const handleDownload = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get(`/api/reports/${reportType}`, {
+      const response = await api.get(`reports/${reportType}`, {
         params: {
           startDate: startDate?.toISOString().split('T')[0],
           endDate: endDate?.toISOString().split('T')[0],

@@ -52,7 +52,7 @@ async function buildApp() {
 async function start() {
     try {
         const app = await buildApp();
-        await app.listen({ port: 3000, host: '0.0.0.0' });
+        await app.listen({ port: process.env['PORT'] ? Number(process.env['PORT']) : 5000, host: '0.0.0.0' });
     }
     catch (err) {
         console.error(err);

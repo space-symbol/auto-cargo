@@ -41,19 +41,19 @@ async function buildApp() {
   });
 
   // Регистрируем маршруты
-  await app.register(authRoutes, { prefix: '/auth' });
-  await app.register(cargoRoutes, { prefix: '/cargo' });
-  await app.register(tariffRoutes);
-  await app.register(referenceRoutes, { prefix: '/reference' });
-  await app.register(reportRoutes, { prefix: '/api' });
-  await app.register(userManagementRoutes, { prefix: '/api' });
+  await app.register(authRoutes, { prefix: '/api/auth' });
+  await app.register(cargoRoutes, { prefix: '/api/cargo' });
+  await app.register(tariffRoutes, { prefix: '/api/tariff' });
+  await app.register(referenceRoutes, { prefix: '/api/reference' });
+  await app.register(reportRoutes, { prefix: '/api/reports' });
+  await app.register(userManagementRoutes, { prefix: '/api/users' });
   return app;
 }
 
 async function start() {
   try {
     const app = await buildApp();
-    await app.listen({ port: 3000, host: '0.0.0.0' });
+    await app.listen({ port: process.env['PORT'] ? Number(process.env['PORT']) : 5000, host: '0.0.0.0' });
     
     
   } catch (err) {
