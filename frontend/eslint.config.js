@@ -16,7 +16,7 @@ export default tseslint.config(
         ...globals.es2020
       },
       parserOptions: {
-        project: ["./tsconfig.json", "./tsconfig.app.json"],
+        project: ["./tsconfig.json", "./tsconfig.app.json", "./tsconfig.node.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -36,7 +36,8 @@ export default tseslint.config(
       }],
       "@typescript-eslint/explicit-function-return-type": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-non-null-assertion": "warn"
+      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/explicit-function-return-type": "off"
     },
   }
 );

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { useYandexMaps } from '@/hooks/useYandexMaps';
 import { useToast } from '@/components/ui/use-toast';
 import { Suggestion } from '../types/cargoRequestTypes';
 
@@ -40,12 +39,6 @@ export const AddressSection: React.FC<AddressSectionProps> = ({
   toCity,
   toStreet,
   toBuilding,
-  onFromCityChange,
-  onFromStreetChange,
-  onFromBuildingChange,
-  onToCityChange,
-  onToStreetChange,
-  onToBuildingChange,
   fromCityError,
   fromStreetError,
   fromBuildingError,
@@ -61,7 +54,6 @@ export const AddressSection: React.FC<AddressSectionProps> = ({
   onFromSuggestionSelect,
   onToSuggestionSelect,
 }) => {
-  const { ymaps } = useYandexMaps();
   const { toast } = useToast();
   const [fromInputValue, setFromInputValue] = useState('');
   const [toInputValue, setToInputValue] = useState('');

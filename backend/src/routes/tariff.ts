@@ -28,6 +28,11 @@ interface UpdateTariffBody {
   cargoTypeIds?: string[];
 }
 
+interface TariffError extends Error {
+  code?: string;
+  statusCode?: number;
+}
+
 export default async function tariffRoutes(fastify: FastifyInstance) {
   const tariffService = new TariffService(prisma);
 
@@ -82,8 +87,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
     try {
       const tariff = await tariffService.createTariff(request.body);
       reply.code(201).send(tariff);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 
@@ -120,8 +126,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
       const { id } = request.params;
       const tariff = await tariffService.updateTariff(id, request.body);
       reply.send(tariff);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 
@@ -147,8 +154,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
         return;
       }
       reply.send(tariff);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 
@@ -172,8 +180,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
       const limit = request.query.limit ? parseInt(request.query.limit) : 10;
       const result = await tariffService.getAllTariffs(page, limit);
       reply.send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 
@@ -205,8 +214,9 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
       });
 
       reply.code(201).send(tariff);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 
@@ -226,12 +236,13 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
     try {
       await tariffService.deleteTariff(request.params.id);
       reply.code(204).send();
-    } catch (error: any) {
-      if (error.code === 'P2025') {
+    } catch (error: unknown) {
+      const tariffError = error as TariffError;
+      if (tariffError.code === 'P2025') {
         reply.code(404).send({ error: 'Тариф не найден' });
         return;
       }
-      reply.code(400).send({ error: error.message });
+      reply.code(500).send({ error: tariffError.message || 'Failed to process tariff operation' });
     }
   });
 } 

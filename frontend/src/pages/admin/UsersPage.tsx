@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usersApi } from '../../api/users';
 import { User, UserRole } from '@/types';
 import {
@@ -23,7 +23,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -31,7 +30,6 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
@@ -40,9 +38,8 @@ export function UsersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { user: currentUser } = useAuth();
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await usersApi.getUsers({
         page,
         limit: 10,
@@ -51,16 +48,14 @@ export function UsersPage() {
       });
       setUsers(response.users);
       setTotalPages(response.pagination.pages);
-    } catch (error) {
+    } catch {
       toast.error('Ошибка при загрузке пользователей');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [page, roleFilter, search]);
 
   useEffect(() => {
     loadUsers();
-  }, [page, search, roleFilter]);
+  }, [page, search, roleFilter, loadUsers]);
 
   const handleEditUser = async (userData: Partial<User>) => {
     if (!selectedUser) return;
@@ -69,8 +64,9 @@ export function UsersPage() {
       toast.success('Пользователь успешно обновлен');
       setIsEditDialogOpen(false);
       loadUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Ошибка при обновлении пользователя');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Ошибка при обновлении пользователя';
+      toast.error(errorMessage);
     }
   };
 
@@ -80,8 +76,9 @@ export function UsersPage() {
       await usersApi.deleteUser(userId);
       toast.success('Пользователь успешно удален');
       loadUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Ошибка при удалении пользователя');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Ошибка при удалении пользователя';
+      toast.error(errorMessage);
     }
   };
 

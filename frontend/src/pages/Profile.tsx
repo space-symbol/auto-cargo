@@ -7,12 +7,10 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { authApi } from '@/api/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/lib/auth/AuthProvider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 export default function Profile() {
-  const { user: authUser } = useAuth();
   const queryClient = useQueryClient();
   
   const { data: user, isLoading, error } = useQuery({

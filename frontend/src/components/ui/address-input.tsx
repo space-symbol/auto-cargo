@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { Check, ChevronsUpDown, Loader2, MapPin } from 'lucide-react';
+import { ChevronsUpDown, Loader2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useYandexMaps } from '@/hooks/useYandexMaps';
 import { Address } from '@/types/api';
@@ -28,7 +28,7 @@ export function AddressInput({ value = '', onChange, placeholder, className, err
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const searchTimeout = useRef<NodeJS.Timeout>();
-  const { isLoaded, error: apiError, ymaps } = useYandexMaps();
+  const { isLoaded, ymaps } = useYandexMaps();
   const isMounted = useRef(true);
 
   useEffect(() => {

@@ -28,7 +28,7 @@ export function useDistanceCalculation(
       setError(null);
 
       try {
-        console.log(fromCoordinates, toCoordinates)
+        
         const route = await ymaps.route([fromCoordinates, toCoordinates], {
           routingMode: 'pedestrian',
           avoidTrafficJams: false
@@ -38,7 +38,7 @@ export function useDistanceCalculation(
         const distanceInKilometers = distanceInMeters / 1000;
         setDistance(distanceInKilometers);
       } catch (err) {
-        console.log(err)
+        
         setError('Не удалось рассчитать расстояние');
         setDistance(null);
       } finally {

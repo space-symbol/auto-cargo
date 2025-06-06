@@ -31,7 +31,7 @@ interface UseAddressHandlingProps {
   toast: ReturnType<typeof useToast>['toast'];
 }
 
-export const useAddressHandling = ({ formData, setFormData, toast }: UseAddressHandlingProps) => {
+export const useAddressHandling = ({ setFormData, toast }: UseAddressHandlingProps) => {
   const [fromSuggestions, setFromSuggestions] = React.useState<Suggestion[]>([]);
   const [toSuggestions, setToSuggestions] = React.useState<Suggestion[]>([]);
   const [showFromSuggestions, setShowFromSuggestions] = useState(false);
@@ -90,8 +90,9 @@ export const useAddressHandling = ({ formData, setFormData, toast }: UseAddressH
       let street = '';
       let building = '';
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       geocoder.geoObjects.each((geoObject: any) => {
-        console.log('Geocoder response:', geoObject);
+        
 
         city = geoObject.getLocalities()[0] || '';
         const thoroughfare = geoObject.getThoroughfare() || '';

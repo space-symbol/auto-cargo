@@ -1,5 +1,3 @@
-import { Address } from '@/types/api';
-
 export interface Suggestion {
   title: {
     text: string;
@@ -78,6 +76,16 @@ export interface WeightVolumeInputsProps {
   }>;
 }
 
+export interface Address {
+  city: string;
+  street: string;
+  building: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
 export interface CalculationResultsProps {
   calculatedCost: {
     cost: number;
@@ -115,7 +123,7 @@ export interface CalculationResultsProps {
     maxWeight: number;
     maxVolume: number;
   }>;
-  fromAddress: any;
-  toAddress: any;
+  fromAddress: Address;
+  toAddress: Address;
   onRequestSubmit: () => void;
 } 

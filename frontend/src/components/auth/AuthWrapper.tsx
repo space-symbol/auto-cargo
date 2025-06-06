@@ -21,7 +21,7 @@ export const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children 
         navigate('/cargo/new');
       }
     }
-  }, [user]);
+  }, [navigate, toast, user]);
 
   return <>{children}</>;
 }; 

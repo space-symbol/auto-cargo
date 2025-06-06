@@ -1,4 +1,4 @@
-import { PrismaClient, CargoRequestStatus, Prisma, CargoRequest, User, CargoType, VehicleType, Tariff, Address, CargoRequestStatusHistory } from '@prisma/client';
+import { PrismaClient, CargoRequestStatus, Prisma } from '@prisma/client';
 import { TariffService } from './tariff';
 import { ReferenceService } from './reference';
 
@@ -87,23 +87,10 @@ export class CargoService {
     transportationDate: string;
     transportationTime: string;
   }) {
-    console.log('Received cost calculation request with data:', {
-      fromAddress: data.fromAddress,
-      toAddress: data.toAddress,
-      cargoTypeId: data.cargoTypeId,
-      vehicleTypeId: data.vehicleTypeId,
-      weight: data.weight,
-      volume: data.volume,
-      transportationDate: data.transportationDate,
-      transportationTime: data.transportationTime
-    });
-
     const tariff = await this.tariffService.getActiveTariff(data.vehicleTypeId, data.cargoTypeId);
     if (!tariff) {
       throw new Error('No active tariff found');
     }
-
-    console.log('Found active tariff:', tariff);
 
     // Формируем строки адресов для расчета расстояния
     const fromAddressStr = `${data.fromAddress.city}, ${data.fromAddress.street}, ${data.fromAddress.building}`;
@@ -111,18 +98,24 @@ export class CargoService {
 
     // Рассчитываем расстояние
     const distance = await this.referenceService.calculateDistance(fromAddressStr, toAddressStr);
-    console.log('Calculated distance:', distance);
 
     const cost = this.calculateRequestCost(data, tariff);
-    console.log('Calculated cost:', cost);
 
     const response = { cost, tariff, distance };
-    console.log('Sending response:', JSON.stringify(response, null, 2));
 
     return response;
   }
 
-  private calculateRequestCost(data: any, tariff: any) {
+  private calculateRequestCost(data: {
+    weight: number;
+    volume: number;
+    distance?: number;
+  }, tariff: {
+    baseRate: number;
+    weightRate: number;
+    volumeRate: number;
+    distanceRate: number;
+  }) {
     return (
       tariff.baseRate +
       data.weight * tariff.weightRate +
@@ -142,7 +135,14 @@ export class CargoService {
       throw new Error('No active tariff found');
     }
 
-    const cost = this.calculateRequestCost(data, tariff);
+    // Формируем строки адресов для расчета расстояния
+    const fromAddressStr = `${data.fromAddress.city}, ${data.fromAddress.street}, ${data.fromAddress.building}`;
+    const toAddressStr = `${data.toAddress.city}, ${data.toAddress.street}, ${data.toAddress.building}`;
+
+    // Рассчитываем расстояние
+    const distance = await this.referenceService.calculateDistance(fromAddressStr, toAddressStr);
+
+    const cost = this.calculateRequestCost({ ...data, distance }, tariff);
 
     const result = await this.prisma.cargoRequest.create({
       data: {
@@ -155,8 +155,9 @@ export class CargoService {
         weightRate: tariff.weightRate,
         volumeRate: tariff.volumeRate,
         distanceRate: tariff.distanceRate,
-        transportationDate: new Date(data.transportationDate),
-        transportationTime: data.transportationTime,
+        transportationDateTime: new Date(data.transportationDate + 'T' + data.transportationTime),
+        tariffId: tariff.id,
+        distance,
         statusHistory: {
           create: {
             status: CargoRequestStatus.PENDING,
@@ -175,7 +176,7 @@ export class CargoService {
       }
     });
 
-    const resultWithDetails: CargoRequestWithDetails = {
+    return {
       ...result,
       costDetails: {
         tariffId: tariff.id,
@@ -184,9 +185,7 @@ export class CargoService {
         volumeRate: tariff.volumeRate,
         distanceRate: tariff.distanceRate
       }
-    };
-
-    return resultWithDetails;
+    } as CargoRequestWithDetails;
   }
 
   async updateRequestStatus(

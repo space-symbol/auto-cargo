@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Statistics } from '@/components/admin/Statistics';
 import { useToast } from '@/components/ui/use-toast';
@@ -35,15 +35,8 @@ export function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [statistics, setStatistics] = useState<StatisticsData | null>(null);
 
-  useEffect(() => {
-    if (!user || user.role !== 'ADMIN') {
-      navigate('/');
-      return;
-    }
-    fetchStatistics();
-  }, [user]);
 
-  const fetchStatistics = async (startDate?: string, endDate?: string) => {
+  const fetchStatistics = useCallback(async (startDate?: string, endDate?: string) => {
     try {
       setLoading(true);
       const response = await api.get('/cargo/admin/statistics', {
@@ -53,7 +46,7 @@ export function StatisticsPage() {
         },
       });
       setStatistics(response.data);
-    } catch (error) {
+    } catch {
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить статистику",
@@ -62,7 +55,17 @@ export function StatisticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (!user || user.role !== 'ADMIN') {
+      navigate('/');
+      return;
+    }
+    fetchStatistics();
+  }, [fetchStatistics, navigate, user]);
+
+
 
   const handleDateRangeChange = (startDate: string, endDate: string) => {
     fetchStatistics(startDate, endDate);

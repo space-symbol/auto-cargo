@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,9 +22,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, MapPin, Package, Truck, Calendar, DollarSign, Filter, X } from 'lucide-react';
+import { MapPin, Package, Truck, Calendar, DollarSign } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -58,18 +57,6 @@ const statusLabels: Record<CargoRequestStatus, string> = {
   [CargoRequestStatus.CANCELLED]: 'Отменено',
 };
 
-const LoadingSkeleton = () => (
-  <div className="space-y-4">
-    <div className="flex items-center space-x-4">
-      <Skeleton className="h-12 w-full" />
-    </div>
-    {Array.from({ length: 5 }).map((_, i) => (
-      <div key={i} className="flex items-center space-x-4">
-        <Skeleton className="h-16 w-full" />
-      </div>
-    ))}
-  </div>
-);
 
 export default function CargoRequestsList() {
   const [page, setPage] = useState(1);
@@ -82,7 +69,7 @@ export default function CargoRequestsList() {
   const pageSize = 10;
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, error, refetch } = useQuery({
     queryKey: ['cargo-requests', page, statusFilter, sortBy, sortOrder],
     queryFn: () => cargoApi.getUserRequests(page, pageSize, {
       status: statusFilter !== 'ALL' ? statusFilter : undefined,

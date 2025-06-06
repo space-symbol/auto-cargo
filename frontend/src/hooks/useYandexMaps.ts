@@ -7,29 +7,89 @@ declare global {
 }
 
 export interface YandexMaps {
-  Map: any;
-  Placemark: any;
-  Polyline: any;
+  Map: new (element: string | HTMLElement, options: {
+    center: [number, number];
+    zoom: number;
+    controls?: string[];
+  }) => {
+    destroy: () => void;
+    setCenter: (center: [number, number]) => void;
+    setZoom: (zoom: number) => void;
+  };
+
+  Placemark: new (coordinates: [number, number], properties?: {
+    iconContent?: string;
+    hintContent?: string;
+    balloonContent?: string;
+  }, options?: {
+    preset?: string;
+    draggable?: boolean;
+  }) => {
+    geometry: {
+      getCoordinates: () => [number, number];
+      setCoordinates: (coordinates: [number, number]) => void;
+    };
+    properties: {
+      get: (key: string) => string | number | boolean | null;
+      set: (key: string, value: string | number | boolean) => void;
+    };
+  };
+
+  Polyline: new (coordinates: [number, number][], properties?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+  }) => {
+    geometry: {
+      getCoordinates: () => [number, number][];
+      setCoordinates: (coordinates: [number, number][]) => void;
+    };
+  };
+
   SuggestView: new (element: string) => {
-    search: (query: string, callback: (results: Array<{ value: string, data: any }>) => void) => void;
+    search: (query: string, callback: (results: Array<{ 
+      value: string; 
+      data: {
+        name: string;
+        description: string;
+        uri: string;
+      };
+    }>) => void) => void;
     events: {
       add: (event: string, callback: (e: { get: (key: string) => { value: string } }) => void) => void;
     };
   };
-  geocode: (query: string, options?: any) => Promise<{
+
+  geocode: (query: string, options?: {
+    results?: number;
+    kind?: string;
+    lang?: string;
+  }) => Promise<{
     geoObjects: {
-      each: (callback: (geoObject: any) => void) => void;
+      each: (callback: (geoObject: {
+        geometry: {
+          getCoordinates: () => [number, number];
+        };
+        properties: {
+          get: (key: string) => string | number | boolean | null;
+        };
+      }) => void) => void;
     };
   }>;
+
   suggest: (query: string) => Promise<{
     _results: Array<{
       value: string;
       displayName: string;
     }>;
   }>;
-  route: (points: [number, number][], options: { routingMode: string; avoidTrafficJams: boolean }) => Promise<{
+
+  route: (points: [number, number][], options: { 
+    routingMode: 'auto' | 'pedestrian' | 'masstransit' | 'bicycle';
+    avoidTrafficJams: boolean;
+  }) => Promise<{
     getLength: () => number;
   }>;
+
   ready: (callback: () => void) => void;
 }
 

@@ -36,7 +36,7 @@ export class ReferenceService {
     }
 
     try {
-      console.log('Getting coordinates for addresses:', { fromAddress, toAddress });
+      
       
       // Сначала получаем координаты для обоих адресов
       const [fromCoords, toCoords] = await Promise.all([
@@ -44,7 +44,7 @@ export class ReferenceService {
         this.getCoordinates(toAddress)
       ]);
 
-      console.log('Received coordinates:', { fromCoords, toCoords });
+      
 
       if (!fromCoords || !toCoords) {
         throw new Error('Could not get coordinates for one or both addresses');
@@ -59,7 +59,7 @@ export class ReferenceService {
         format: 'json'
       };
 
-      console.log('Sending request to OpenRouteService:', requestBody);
+      
 
       const response = await axios.post(
         'https://api.openrouteservice.org/v2/directions/driving-car',
@@ -73,7 +73,7 @@ export class ReferenceService {
         }
       );
 
-      console.log('OpenRouteService response:', response.data);
+      
 
       if (!response.data.routes?.[0]?.summary?.distance) {
         throw new Error('Invalid response format from OpenRouteService');
@@ -102,7 +102,7 @@ export class ReferenceService {
     }
 
     try {
-      console.log('Geocoding address:', address);
+      
 
       const response = await axios.get(
         'https://api.openrouteservice.org/geocode/search',
@@ -119,7 +119,7 @@ export class ReferenceService {
         }
       );
 
-      console.log('Geocoding response:', response.data);
+      
 
       if (!response.data.features?.[0]?.geometry?.coordinates) {
         console.error('Invalid geocoding response:', response.data);

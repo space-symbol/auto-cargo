@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { CargoRequestStatus, UserRole } from '../generated/prisma';
+import { CargoRequestStatus, UserRole } from '@prisma/client';
 import { CargoService } from '../services/cargo';
 import { TariffService } from '../services/tariff';
 import { ReferenceService } from '../services/reference';
@@ -45,19 +45,6 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
   const tariffService = new TariffService(prisma);
   const referenceService = new ReferenceService(prisma);
   const cargoService = new CargoService(prisma, tariffService, referenceService);
-
-  const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const token = request.headers.authorization?.split(' ')[1];
-      if (!token) {
-        throw new Error('No token provided');
-      }
-      const decoded = await verifyToken(token);
-      (request as AuthenticatedRequest).user = decoded;
-    } catch (error) {
-      reply.code(401).send({ error: 'Unauthorized' });
-    }
-  };
 
   // Расчет стоимости (доступен без авторизации)
   fastify.post<{ Body: RequestBody }>('/calculate-cost', {
@@ -109,8 +96,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     try {
       const costCalculation = await cargoService.calculateCost(request.body);
       reply.send(costCalculation);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
@@ -163,15 +151,16 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest<{ Body: RequestBody }>, reply: FastifyReply) => {
     try {
-      const user = (request as any).user;
+      const user = (request as AuthenticatedRequest).user;
       const requestData = {
         ...request.body,
         userId: user.id
       };
       const result = await cargoService.createRequest(requestData);
       reply.code(201).send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
@@ -198,9 +187,17 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (request: FastifyRequest<{
+    Querystring: { 
+      page?: number; 
+      pageSize?: number;
+      status?: CargoRequestStatus;
+      sortBy?: 'date' | 'cost';
+      sortOrder?: 'asc' | 'desc';
+    }
+  }>, reply: FastifyReply) => {
     try {
-      const user = (request as any).user;
+      const user = (request as AuthenticatedRequest).user;
       const { page, pageSize, status, sortBy, sortOrder } = request.query;
       const requests = await cargoService.getUserRequests(user.email, {
         page,
@@ -210,13 +207,22 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
         sortOrder
       });
       reply.send(requests);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
   // Получение всех заявок (для админов и менеджеров)
-  fastify.get('/admin/requests', {
+  fastify.get<{
+    Querystring: {
+      page?: number;
+      pageSize?: number;
+      status?: CargoRequestStatus;
+      sortBy?: 'date' | 'cost';
+      sortOrder?: 'asc' | 'desc';
+    }
+  }>('/admin/requests', {
     preHandler: [authenticate, requireRole([UserRole.ADMIN, UserRole.MANAGER])],
     schema: {
       querystring: {
@@ -230,7 +236,15 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (request: FastifyRequest<{
+    Querystring: {
+      page?: number;
+      pageSize?: number;
+      status?: CargoRequestStatus;
+      sortBy?: 'date' | 'cost';
+      sortOrder?: 'asc' | 'desc';
+    }
+  }>, reply: FastifyReply) => {
     try {
       const { page, pageSize, status, sortBy, sortOrder } = request.query;
       const requests = await cargoService.getAllRequests({
@@ -241,8 +255,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
         sortOrder
       });
       reply.send(requests);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
@@ -250,8 +265,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: RequestParams }>('/requests/:id', {
     preHandler: [authenticate],
     schema: {
-      querystring: {
+      params: {
         type: 'object',
+        required: ['id'],
         properties: {
           id: { type: 'string' }
         }
@@ -259,7 +275,7 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest<{ Params: RequestParams }>, reply: FastifyReply) => {
     try {
-      const user = (request as any).user;
+      const user = (request as AuthenticatedRequest).user;
       const { id } = request.params;
       const cargoRequest = await cargoService.getRequestById(id);
       
@@ -277,8 +293,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
       }
 
       reply.send(cargoRequest);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
@@ -304,13 +321,19 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
       const { status, comment } = request.body;
       const result = await cargoService.updateRequestStatus(id, status, comment);
       reply.send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 
   // Получение статистики (только для админов)
-  fastify.get('/admin/statistics', {
+  fastify.get<{
+    Querystring: {
+      startDate?: string;
+      endDate?: string;
+    }
+  }>('/admin/statistics', {
     preHandler: [authenticate, requireRole([UserRole.ADMIN])],
     schema: {
       querystring: {
@@ -321,10 +344,15 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (request: FastifyRequest<{
+    Querystring: {
+      startDate?: string;
+      endDate?: string;
+    }
+  }>, reply: FastifyReply) => {
     try {
       const { startDate, endDate } = request.query;
-      const statistics = await cargoService.getStatistics(startDate, endDate);
+      const statistics = await cargoService.getStatistics({ startDate, endDate });
       reply.send(statistics);
     } catch (error: any) {
       reply.code(400).send({ error: error.message });
@@ -345,7 +373,6 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
     }
   }, async (request: FastifyRequest<{ Params: RequestParams }>, reply: FastifyReply) => {
     try {
-      const user = (request as any).user;
       const { id } = request.params;
       
       const result = await cargoService.updateRequestStatus(
@@ -355,8 +382,9 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
       );
       
       reply.send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      reply.code(400).send({ error: errorMessage });
     }
   });
 } 

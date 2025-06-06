@@ -1,0 +1,139 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  YANDEX_SUGGESSIONS_MAPS_API_KEY: ${{ secrets.YANDEX_SUGGESSIONS_MAPS_API_KEY }}
+  YANDEX_MAPS_API_KEY: ${{ secrets.YANDEX_MAPS_API_KEY }}
+  OPENROUTE_API_KEY: ${{ secrets.OPENROUTE_API_KEY }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Setup Node.js for Frontend
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
+
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Lint Frontend
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      env:
+        VITE_YANDEX_MAPS_API_KEY: ${{ secrets.YANDEX_MAPS_API_KEY }}
+      run: npm run build
+
+    - name: Setup Node.js for Backend
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './backend/package-lock.json'
+
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Generate Prisma Client
+      working-directory: ./backend
+      run: npx prisma generate
+
+    - name: Lint Backend
+      working-directory: ./backend
+      run: npm run lint
+
+    - name: Build Backend
+      working-directory: ./backend
+      run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: Install SSH key
+      uses: shimataro/ssh-key-action@v2
+      with:
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+        if_key_exists: replace
+
+    - name: Deploy to server
+      run: |
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "set -e
+
+        # Setup NVM and Node.js
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
+        nvm use 22.16.0
+
+        # Clone or update repository
+        cd /home
+        if [ -d \"app\" ]; then
+          cd app
+          if [ -d \".git\" ]; then
+            git config pull.rebase true
+            git pull https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
+          else
+            # If app exists but is not a git repo, backup and clone fresh
+            cd ..
+            mv app app_backup_\$(date +%Y%m%d_%H%M%S)
+            git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git app
+          fi
+        else
+          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git app
+        fi
+
+        cd /home/app
+
+        # Setup Nginx if not already configured
+        if [ ! -f \"/etc/nginx/sites-enabled/transvastor.ru\" ]; then
+          cd nginx
+          sudo ./setup.sh
+          cd ..
+        fi
+
+        # Frontend deployment
+        cd frontend
+        . \"\$NVM_DIR/nvm.sh\"
+        nvm use 22.16.0
+        npm ci
+        npm run build
+
+        # Backend deployment
+        cd ../backend
+        . \"\$NVM_DIR/nvm.sh\"
+        nvm use 22.16.0
+        npm ci
+        npx prisma generate
+        npm run build
+        if pm2 list | grep -q 'backend'; then
+          pm2 restart backend
+        else
+          pm2 start dist/index.js --name \"backend\"
+        fi" 

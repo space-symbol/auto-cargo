@@ -24,6 +24,11 @@ interface UpdateProfileBody {
   company?: string;
 }
 
+interface AuthError extends Error {
+  code?: string;
+  statusCode?: number;
+}
+
 export default async function authRoutes(fastify: FastifyInstance) {
   const userService = new UserService(prisma);
 
@@ -46,8 +51,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
     try {
       const result = await userService.register(request.body);
       reply.code(201).send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      if (authError.code === 'P2002') {
+        return reply.code(400).send({ error: 'Email already exists' });
+      }
+      throw error;
     }
   });
 

@@ -1,6 +1,6 @@
 import { PrismaClient, UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { generateToken, JwtPayload } from '../utils/auth';
+import { generateToken } from '../utils/auth';
 
 export class UserService {
   constructor(private prisma: PrismaClient) {}

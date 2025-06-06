@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,22 +50,15 @@ export function TariffsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
-  useEffect(() => {
-    if (!user || user.role !== 'ADMIN') {
-      navigate('/');
-      return;
-    }
-    fetchTariffs();
-  }, [user, currentPage, pageSize]);
 
-  const fetchTariffs = async () => {
+  const fetchTariffs = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get<PaginatedResponse>(`/tariffs?page=${currentPage}&limit=${pageSize}`);
       setTariffs(response.data.tariffs);
       setTotalPages(response.data.pagination.totalPages);
       setTotalItems(response.data.pagination.total);
-    } catch (error) {
+    } catch {
       toast({
         title: "Ошибка",
         description: "Не удалось загрузить список тарифов",
@@ -74,8 +67,19 @@ export function TariffsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, toast]);
 
+  useEffect(() => {
+    if (!user || user.role !== 'ADMIN') {
+      navigate('/');
+      return;
+    }
+  
+  
+    fetchTariffs();
+  }, [user, currentPage, pageSize, navigate, fetchTariffs]);
+
+  
   const handleEdit = (tariff: Tariff) => {
     setSelectedTariff(tariff);
     setIsDialogOpen(true);
@@ -96,7 +100,7 @@ export function TariffsPage() {
         description: "Тариф успешно удален",
       });
       fetchTariffs();
-    } catch (error) {
+    } catch {
       toast({
         title: "Ошибка",
         description: "Не удалось удалить тариф",
@@ -113,16 +117,17 @@ export function TariffsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: unknown) => {
     try {
+      const tariffData = data as Omit<Tariff, 'id'>;
       if (selectedTariff) {
-        await api.patch(`/tariffs/${selectedTariff.id}`, data);
+        await api.patch(`/tariffs/${selectedTariff.id}`, tariffData);
         toast({
           title: "Успех",
           description: "Тариф успешно обновлен",
         });
       } else {
-        await api.post('/tariffs', data);
+        await api.post('/tariffs', tariffData);
         toast({
           title: "Успех",
           description: "Тариф успешно создан",
@@ -130,7 +135,7 @@ export function TariffsPage() {
       }
       setIsDialogOpen(false);
       fetchTariffs();
-    } catch (error) {
+    } catch {
       toast({
         title: "Ошибка",
         description: "Не удалось сохранить тариф",

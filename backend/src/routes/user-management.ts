@@ -20,6 +20,11 @@ interface QueryParams {
   role?: UserRole;
 }
 
+interface UserManagementError extends Error {
+  code?: string;
+  statusCode?: number;
+}
+
 export default async function userManagementRoutes(fastify: FastifyInstance) {
   const userService = new UserService(prisma);
 
@@ -42,8 +47,9 @@ export default async function userManagementRoutes(fastify: FastifyInstance) {
       const { page = 1, limit = 10, search, role } = request.query;
       const result = await userService.getUsers({ page, limit, search, role });
       reply.send(result);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const userError = error as UserManagementError;
+      reply.code(500).send({ error: userError.message || 'Failed to process user operation' });
     }
   });
 
@@ -63,8 +69,9 @@ export default async function userManagementRoutes(fastify: FastifyInstance) {
     try {
       const user = await userService.getUserById(request.params.id);
       reply.send(user);
-    } catch (error: any) {
-      reply.code(404).send({ error: error.message });
+    } catch (error: unknown) {
+      const userError = error as UserManagementError;
+      reply.code(500).send({ error: userError.message || 'Failed to process user operation' });
     }
   });
 
@@ -103,8 +110,9 @@ export default async function userManagementRoutes(fastify: FastifyInstance) {
 
       const updatedUser = await userService.updateUser(request.params.id, request.body);
       reply.send(updatedUser);
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const userError = error as UserManagementError;
+      reply.code(500).send({ error: userError.message || 'Failed to process user operation' });
     }
   });
 
@@ -132,8 +140,9 @@ export default async function userManagementRoutes(fastify: FastifyInstance) {
 
       await userService.deleteUser(request.params.id);
       reply.code(204).send();
-    } catch (error: any) {
-      reply.code(400).send({ error: error.message });
+    } catch (error: unknown) {
+      const userError = error as UserManagementError;
+      reply.code(500).send({ error: userError.message || 'Failed to process user operation' });
     }
   });
 } 

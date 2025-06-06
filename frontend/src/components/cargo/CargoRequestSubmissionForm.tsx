@@ -32,7 +32,7 @@ export default function CargoRequestSubmissionForm() {
       });
       return;
     }
-  }, [formData, user]);
+  }, [formData, navigate, user]);
 
   const handleSubmit = async () => {
     if (!formData || !user) return;
@@ -41,7 +41,8 @@ export default function CargoRequestSubmissionForm() {
     try {
       await cargoApi.submitRequest({
         ...formData,
-        userId: user.id
+        userId: user.id,
+        transportationDateTime: new Date().toISOString()
       });
 
       // Очищаем сохраненные данные формы
@@ -54,7 +55,7 @@ export default function CargoRequestSubmissionForm() {
 
       // Перенаправляем на страницу со списком заявок
       navigate('/cargo/requests');
-    } catch (error) {
+    } catch {
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать заявку',

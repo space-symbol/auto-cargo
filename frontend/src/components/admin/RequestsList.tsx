@@ -27,7 +27,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, MapPin, Package, Truck, Calendar, DollarSign, ChevronDown } from 'lucide-react';
+import { User, MapPin, Package, Truck } from 'lucide-react';
 import { StatusChangeDialog } from './StatusChangeDialog';
 
 interface RequestsListProps {

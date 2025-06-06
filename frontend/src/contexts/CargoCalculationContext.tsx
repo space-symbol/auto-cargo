@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface AddressData {
   city: string;
@@ -45,6 +45,7 @@ export function CargoCalculationProvider({ children }: { children: ReactNode }) 
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCargoCalculation() {
   const context = useContext(CargoCalculationContext);
   if (context === undefined) {

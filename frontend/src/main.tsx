@@ -40,7 +40,12 @@ const initApp = async () => {
       },
     });
 
-    ReactDOM.createRoot(document.getElementById('root')!).render(
+    const rootElement = document.getElementById('root');
+    if (!rootElement) {
+      throw new Error('Root element not found');
+    }
+
+    ReactDOM.createRoot(rootElement).render(
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <App />
@@ -51,7 +56,12 @@ const initApp = async () => {
   } catch (error) {
     console.error('Failed to initialize app:', error);
     // Показываем сообщение об ошибке пользователю
-    ReactDOM.createRoot(document.getElementById('root')!).render(
+    const rootElement = document.getElementById('root');
+    if (!rootElement) {
+      throw new Error('Root element not found');
+    }
+
+    ReactDOM.createRoot(rootElement).render(
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center p-6">
           <h1 className="text-2xl font-bold text-destructive mb-4">Ошибка загрузки</h1>

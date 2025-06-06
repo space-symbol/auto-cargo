@@ -1,7 +1,8 @@
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import { createObjectCsvWriter } from 'csv-writer';
-import { CargoRequestStatus } from '../generated/prisma';
+import { CargoRequestStatus } from '@prisma/client';
+import { promises as fs } from 'fs';
 
 
 interface ReportData {
@@ -48,6 +49,10 @@ interface UserActivityReport extends ReportData {
   }>;
 }
 
+interface ReportRecord {
+  [key: string]: string | number;
+}
+
 const statusLabels: Record<CargoRequestStatus, string> = {
   PENDING: 'Ожидает рассмотрения',
   PROCESSING: 'В обработке',
@@ -60,7 +65,7 @@ export class ReportFormatter {
   static async toPDF(report: CargoStatisticsReport | FinancialReport | UserActivityReport): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
-        console.log('Starting PDF generation...');
+        
         const chunks: Buffer[] = [];
         
         // Create PDF document with Times-Roman font
@@ -84,11 +89,11 @@ export class ReportFormatter {
           }
         });
 
-        console.log('PDF document created');
+        
 
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => {
-          console.log('PDF generation completed');
+          
           resolve(Buffer.concat(chunks));
         });
         doc.on('error', (err) => {
@@ -112,11 +117,11 @@ export class ReportFormatter {
         }
         doc.moveDown();
 
-        console.log('Report header added');
+        
 
         // Add report content based on type
         if ('statistics' in report) {
-          console.log('Generating cargo statistics report');
+          
           doc.font('Times-Bold').fontSize(16).text(encodeText('СТАТИСТИКА ПО ГРУЗОПЕРЕВОЗКАМ'), { align: 'center' });
           doc.moveDown();
           
@@ -142,7 +147,7 @@ export class ReportFormatter {
             doc.moveDown();
           });
         } else if ('financialData' in report) {
-          console.log('Generating financial report');
+          
           doc.font('Times-Bold').fontSize(16).text(encodeText('ФИНАНСОВЫЙ ОТЧЕТ'), { align: 'center' });
           doc.moveDown();
 
@@ -165,7 +170,7 @@ export class ReportFormatter {
             doc.moveDown();
           });
         } else if ('userActivity' in report) {
-          console.log('Generating user activity report');
+          
           doc.font('Times-Bold').fontSize(16).text(encodeText('ОТЧЕТ ПО АКТИВНОСТИ ПОЛЬЗОВАТЕЛЕЙ'), { align: 'center' });
           doc.moveDown();
 
@@ -184,8 +189,6 @@ export class ReportFormatter {
           });
         }
 
-        console.log('Report content added');
-
         // Add footer
         const pageCount = doc.bufferedPageRange().count;
         for (let i = 0; i < pageCount; i++) {
@@ -198,7 +201,7 @@ export class ReportFormatter {
           );
         }
 
-        console.log('Footer added, ending document');
+        
         doc.end();
       } catch (error) {
         console.error('Error in PDF generation:', error);
@@ -320,7 +323,7 @@ export class ReportFormatter {
 
   static async toCSV(report: CargoStatisticsReport | FinancialReport | UserActivityReport): Promise<string> {
     let headers: { id: string; title: string }[] = [];
-    let records: any[] = [];
+    let records: ReportRecord[] = [];
 
     if ('statistics' in report) {
       headers = [
@@ -376,9 +379,8 @@ export class ReportFormatter {
     });
 
     await csvWriter.writeRecords(records);
-    const fs = require('fs');
-    const csvContent = fs.readFileSync('temp.csv', 'utf8');
-    fs.unlinkSync('temp.csv');
+    const csvContent = await fs.readFile('temp.csv', 'utf8');
+    await fs.unlink('temp.csv');
 
     return csvContent;
   }

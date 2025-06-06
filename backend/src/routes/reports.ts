@@ -1,7 +1,7 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireRole } from '../utils/auth';
-import { UserRole } from '../generated/prisma';
+import { UserRole } from '@prisma/client';
 import { ReportService } from '../services/report';
 import { ReportFormatter } from '../utils/report-formatters';
 import fs from 'fs';
@@ -11,6 +11,11 @@ interface ReportQuery {
   startDate?: string;
   endDate?: string;
   format?: 'pdf' | 'excel' | 'csv';
+}
+
+interface ReportError extends Error {
+  code?: string;
+  statusCode?: number;
 }
 
 export default async function reportRoutes(fastify: FastifyInstance) {
@@ -73,49 +78,32 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       );
 
       // Validate report data
-      console.log('Report data:', JSON.stringify(report, null, 2));
+      
       if (!report.statistics || !Array.isArray(report.statistics)) {
         throw new Error('Invalid report data received from service');
       }
-      console.log('Report data validation passed');
+      
 
       switch (format) {
-        case 'pdf':
-          const pdfBuffer = await ReportFormatter.toPDF(report);
-          if (!pdfBuffer || pdfBuffer.length === 0) {
-            throw new Error('Failed to generate PDF report');
-          }
-          reply.header('Content-Type', 'application/pdf');
-          reply.header('Content-Disposition', 'attachment; filename=cargo-statistics.pdf');
-          reply.send(pdfBuffer);
-          break;
-        case 'excel':
-          const excelBuffer = await ReportFormatter.toExcel(report);
-          if (!excelBuffer || excelBuffer.length === 0) {
-            throw new Error('Failed to generate Excel report');
-          }
-          reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-          reply.header('Content-Disposition', 'attachment; filename=cargo-statistics.xlsx');
-          reply.send(excelBuffer);
-          break;
-        case 'csv':
-          const csvContent = await ReportFormatter.toCSV(report);
-          if (!csvContent) {
-            throw new Error('Failed to generate CSV report');
-          }
-          reply.header('Content-Type', 'text/csv');
-          reply.header('Content-Disposition', 'attachment; filename=cargo-statistics.csv');
-          reply.send(csvContent);
-          break;
+        case 'pdf': {
+          const buffer = await ReportFormatter.toPDF(report);
+          return reply.type('application/pdf').header('Content-Disposition', 'attachment; filename=cargo-statistics.pdf').send(buffer);
+        }
+        case 'excel': {
+          const buffer = await ReportFormatter.toExcel(report);
+          return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition', 'attachment; filename=cargo-statistics.xlsx').send(buffer);
+        }
+        case 'csv': {
+          const csv = await ReportFormatter.toCSV(report);
+          return reply.type('text/csv').header('Content-Disposition', 'attachment; filename=cargo-statistics.csv').send(csv);
+        }
         default:
-          reply.send(report);
+          return reply.status(400).send({ error: 'Unsupported format' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const reportError = error as ReportError;
       fastify.log.error(error);
-      reply.code(500).send({ 
-        error: error.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+      reply.code(500).send({ error: reportError.message || 'Failed to generate report' });
     }
   });
 
@@ -157,42 +145,25 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       }
 
       switch (format) {
-        case 'pdf':
-          const pdfBuffer = await ReportFormatter.toPDF(report);
-          if (!pdfBuffer || pdfBuffer.length === 0) {
-            throw new Error('Failed to generate PDF report');
-          }
-          reply.header('Content-Type', 'application/pdf');
-          reply.header('Content-Disposition', 'attachment; filename=financial-report.pdf');
-          reply.send(pdfBuffer);
-          break;
-        case 'excel':
-          const excelBuffer = await ReportFormatter.toExcel(report);
-          if (!excelBuffer || excelBuffer.length === 0) {
-            throw new Error('Failed to generate Excel report');
-          }
-          reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-          reply.header('Content-Disposition', 'attachment; filename=financial-report.xlsx');
-          reply.send(excelBuffer);
-          break;
-        case 'csv':
-          const csvContent = await ReportFormatter.toCSV(report);
-          if (!csvContent) {
-            throw new Error('Failed to generate CSV report');
-          }
-          reply.header('Content-Type', 'text/csv');
-          reply.header('Content-Disposition', 'attachment; filename=financial-report.csv');
-          reply.send(csvContent);
-          break;
+        case 'pdf': {
+          const buffer = await ReportFormatter.toPDF(report);
+          return reply.type('application/pdf').header('Content-Disposition', 'attachment; filename=financial-report.pdf').send(buffer);
+        }
+        case 'excel': {
+          const buffer = await ReportFormatter.toExcel(report);
+          return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition', 'attachment; filename=financial-report.xlsx').send(buffer);
+        }
+        case 'csv': {
+          const csv = await ReportFormatter.toCSV(report);
+          return reply.type('text/csv').header('Content-Disposition', 'attachment; filename=financial-report.csv').send(csv);
+        }
         default:
-          reply.send(report);
+          return reply.status(400).send({ error: 'Unsupported format' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const reportError = error as ReportError;
       fastify.log.error(error);
-      reply.code(500).send({ 
-        error: error.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+      reply.code(500).send({ error: reportError.message || 'Failed to generate report' });
     }
   });
 
@@ -234,42 +205,25 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       }
 
       switch (format) {
-        case 'pdf':
-          const pdfBuffer = await ReportFormatter.toPDF(report);
-          if (!pdfBuffer || pdfBuffer.length === 0) {
-            throw new Error('Failed to generate PDF report');
-          }
-          reply.header('Content-Type', 'application/pdf');
-          reply.header('Content-Disposition', 'attachment; filename=user-activity.pdf');
-          reply.send(pdfBuffer);
-          break;
-        case 'excel':
-          const excelBuffer = await ReportFormatter.toExcel(report);
-          if (!excelBuffer || excelBuffer.length === 0) {
-            throw new Error('Failed to generate Excel report');
-          }
-          reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-          reply.header('Content-Disposition', 'attachment; filename=user-activity.xlsx');
-          reply.send(excelBuffer);
-          break;
-        case 'csv':
-          const csvContent = await ReportFormatter.toCSV(report);
-          if (!csvContent) {
-            throw new Error('Failed to generate CSV report');
-          }
-          reply.header('Content-Type', 'text/csv');
-          reply.header('Content-Disposition', 'attachment; filename=user-activity.csv');
-          reply.send(csvContent);
-          break;
+        case 'pdf': {
+          const buffer = await ReportFormatter.toPDF(report);
+          return reply.type('application/pdf').header('Content-Disposition', 'attachment; filename=user-activity.pdf').send(buffer);
+        }
+        case 'excel': {
+          const buffer = await ReportFormatter.toExcel(report);
+          return reply.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').header('Content-Disposition', 'attachment; filename=user-activity.xlsx').send(buffer);
+        }
+        case 'csv': {
+          const csv = await ReportFormatter.toCSV(report);
+          return reply.type('text/csv').header('Content-Disposition', 'attachment; filename=user-activity.csv').send(csv);
+        }
         default:
-          reply.send(report);
+          return reply.status(400).send({ error: 'Unsupported format' });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const reportError = error as ReportError;
       fastify.log.error(error);
-      reply.code(500).send({ 
-        error: error.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+      reply.code(500).send({ error: reportError.message || 'Failed to generate report' });
     }
   });
 } 
