@@ -111,6 +111,19 @@ jobs:
 
         cd /home/app
 
+        # Create .env files
+        cat > backend/.env << 'EOL'
+        DATABASE_URL=${{ secrets.DATABASE_URL }}
+        JWT_SECRET=${{ secrets.JWT_SECRET }}
+        YANDEX_SUGGESSIONS_MAPS_API_KEY=${{ secrets.YANDEX_SUGGESSIONS_MAPS_API_KEY }}
+        YANDEX_MAPS_API_KEY=${{ secrets.YANDEX_MAPS_API_KEY }}
+        OPENROUTE_API_KEY=${{ secrets.OPENROUTE_API_KEY }}
+        EOL
+
+        cat > frontend/.env << 'EOL'
+        VITE_YANDEX_MAPS_API_KEY=${{ secrets.YANDEX_MAPS_API_KEY }}
+        EOL
+
         # Setup Nginx if not already configured
         if [ ! -f \"/etc/nginx/sites-enabled/transvastor.ru\" ]; then
           cd nginx
