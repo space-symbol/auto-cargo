@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useCargoRequestForm } from '@/hooks/useCargoRequestForm';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';

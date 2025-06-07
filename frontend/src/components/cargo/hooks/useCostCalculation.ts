@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { FormValues } from '../types/cargoRequestTypes';
 import React from 'react';
 

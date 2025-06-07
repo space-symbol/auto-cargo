@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { usersApi } from '../../api/users';
+import { usersApi } from '@/api';
 import { User, UserRole } from '@/types';
 import {
   Table,

@@ -24,8 +24,7 @@ interface RequestBody {
     building: string;
     country: string;
   };
-  transportationDate: string;
-  transportationTime: string;
+  transportationDateTime: string;
 }
 
 interface StatusUpdateBody {
@@ -58,8 +57,7 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
           'volume',
           'fromAddress',
           'toAddress',
-          'transportationDate',
-          'transportationTime'
+          'transportationDateTime'
         ],
         properties: {
           cargoTypeId: { type: 'string' },
@@ -87,8 +85,7 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
               country: { type: 'string' }
             }
           },
-          transportationDate: { type: 'string', format: 'date' },
-          transportationTime: { type: 'string', pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
+          transportationDateTime: { type: 'string', format: 'date-time' }
         }
       }
     }
@@ -115,8 +112,7 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
           'volume',
           'fromAddress',
           'toAddress',
-          'transportationDate',
-          'transportationTime'
+          'transportationDateTime'
         ],
         properties: {
           cargoTypeId: { type: 'string' },
@@ -144,8 +140,7 @@ export default async function cargoRoutes(fastify: FastifyInstance) {
               country: { type: 'string' }
             }
           },
-          transportationDate: { type: 'string', format: 'date' },
-          transportationTime: { type: 'string', pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
+          transportationDateTime: { type: 'string', format: 'date-time' }
         }
       }
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { referenceApi } from '@/api/api';
+import { referenceApi } from '@/api';
 import { FormValues } from '../types/cargoRequestTypes';
 import React from 'react';
 import { useYandexMaps } from '@/hooks/useYandexMaps';

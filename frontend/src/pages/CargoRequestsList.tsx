@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { CargoRequestStatus, CargoRequest } from '@/types/api';
 import { formatDate } from '@/lib/utils';
 import {

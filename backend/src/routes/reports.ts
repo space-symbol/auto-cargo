@@ -4,8 +4,6 @@ import { authenticate, requireRole } from '../utils/auth';
 import { UserRole } from '@prisma/client';
 import { ReportService } from '../services/report';
 import { ReportFormatter } from '../utils/report-formatters';
-import fs from 'fs';
-import path from 'path';
 
 interface ReportQuery {
   startDate?: string;
@@ -35,20 +33,10 @@ export default async function reportRoutes(fastify: FastifyInstance) {
     }
   }
 
-  // Helper function to check if fonts exist
-  function checkFonts() {
-    const regularFont = path.join(__dirname, '../../assets/fonts/Roboto-Regular.ttf');
-    const boldFont = path.join(__dirname, '../../assets/fonts/Roboto-Bold.ttf');
-    
-    if (!fs.existsSync(regularFont) || !fs.existsSync(boldFont)) {
-      throw new Error('Required fonts are missing. Please ensure Roboto fonts are installed.');
-    }
-  }
-
   // Get cargo statistics report
   fastify.get<{
     Querystring: ReportQuery;
-  }>('/reports/cargo-statistics', {
+  }>('/cargo-statistics', {
     preHandler: [authenticate, adminOnly],
     schema: {
       querystring: {
@@ -66,11 +54,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       
       // Validate dates
       validateDates(startDate, endDate);
-
-      // Check fonts for PDF
-      if (format === 'pdf') {
-        checkFonts();
-      }
       
       const report = await reportService.generateCargoStatisticsReport(
         startDate ? new Date(startDate) : undefined,
@@ -78,11 +61,9 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       );
 
       // Validate report data
-      
       if (!report.statistics || !Array.isArray(report.statistics)) {
         throw new Error('Invalid report data received from service');
       }
-      
 
       switch (format) {
         case 'pdf': {
@@ -110,7 +91,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // Get financial report
   fastify.get<{
     Querystring: ReportQuery;
-  }>('/reports/financial', {
+  }>('/financial', {
     preHandler: [authenticate, adminOnly],
     schema: {
       querystring: {
@@ -128,11 +109,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       
       // Validate dates
       validateDates(startDate, endDate);
-
-      // Check fonts for PDF
-      if (format === 'pdf') {
-        checkFonts();
-      }
       
       const report = await reportService.generateFinancialReport(
         startDate ? new Date(startDate) : undefined,
@@ -170,7 +146,7 @@ export default async function reportRoutes(fastify: FastifyInstance) {
   // Get user activity report
   fastify.get<{
     Querystring: ReportQuery;
-  }>('/reports/user-activity', {
+  }>('/user-activity', {
     preHandler: [authenticate, adminOnly],
     schema: {
       querystring: {
@@ -188,11 +164,6 @@ export default async function reportRoutes(fastify: FastifyInstance) {
       
       // Validate dates
       validateDates(startDate, endDate);
-
-      // Check fonts for PDF
-      if (format === 'pdf') {
-        checkFonts();
-      }
       
       const report = await reportService.generateUserActivityReport(
         startDate ? new Date(startDate) : undefined,
