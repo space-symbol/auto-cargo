@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { createObjectCsvWriter } from 'csv-writer';
 import { CargoRequestStatus } from '@prisma/client';
 import { promises as fs } from 'fs';
+import path from 'path';
 
 
 interface ReportData {
@@ -65,10 +66,9 @@ export class ReportFormatter {
   static async toPDF(report: CargoStatisticsReport | FinancialReport | UserActivityReport): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
-        
         const chunks: Buffer[] = [];
         
-        // Create PDF document with Times-Roman font
+        // Create PDF document
         const doc = new PDFDocument({
           size: 'A4',
           margins: {
@@ -77,7 +77,6 @@ export class ReportFormatter {
             left: 50,
             right: 50
           },
-          font: 'Helvetica',
           autoFirstPage: true,
           bufferPages: true,
           info: {
@@ -89,11 +88,23 @@ export class ReportFormatter {
           }
         });
 
+        // Register custom Times New Roman fonts
+        const fontsPath = path.join(__dirname, '../../assets/fonts');
         
+        let regularFont = 'Helvetica';
+        let boldFont = 'Helvetica-Bold';
+        
+        try {
+          doc.registerFont('TimesRegular', path.join(fontsPath, 'timesnrcyrmt.ttf'));
+          doc.registerFont('TimesBold', path.join(fontsPath, 'timesnrcyrmt_bold.ttf'));
+          regularFont = 'TimesRegular';
+          boldFont = 'TimesBold';
+        } catch (fontError) {
+          console.warn('Could not load custom fonts, falling back to Helvetica:', fontError);
+        }
 
         doc.on('data', (chunk) => chunks.push(chunk));
         doc.on('end', () => {
-          
           resolve(Buffer.concat(chunks));
         });
         doc.on('error', (err) => {
@@ -101,32 +112,24 @@ export class ReportFormatter {
           reject(err);
         });
 
-        // Helper function to encode text
-        const encodeText = (text: string): string => {
-          return text;
-        };
-
         // Add report header
-        doc.font('Times-Bold').fontSize(24).text(encodeText('ООО "ТРЭНС ВЭСТОР"'), { align: 'center' });
+        doc.font(boldFont).fontSize(24).text('ООО "ТРЭНС ВЭСТОР"', { align: 'center' });
         doc.moveDown();
-        doc.font('Times-Bold').fontSize(20).text(encodeText('ОТЧЕТ'), { align: 'center' });
+        doc.font(boldFont).fontSize(20).text('ОТЧЕТ', { align: 'center' });
         doc.moveDown();
-        doc.font('Times-Roman').fontSize(12).text(encodeText(`Дата формирования: ${report.generatedAt.toLocaleString('ru-RU')}`));
+        doc.font(regularFont).fontSize(12).text(`Дата формирования: ${report.generatedAt.toLocaleString('ru-RU')}`);
         if (report.period.startDate || report.period.endDate) {
-          doc.text(encodeText(`Период: ${report.period.startDate?.toLocaleDateString('ru-RU') || 'начало'} - ${report.period.endDate?.toLocaleDateString('ru-RU') || 'конец'}`));
+          doc.text(`Период: ${report.period.startDate?.toLocaleDateString('ru-RU') || 'начало'} - ${report.period.endDate?.toLocaleDateString('ru-RU') || 'конец'}`);
         }
         doc.moveDown();
 
-        
-
         // Add report content based on type
         if ('statistics' in report) {
-          
-          doc.font('Times-Bold').fontSize(16).text(encodeText('СТАТИСТИКА ПО ГРУЗОПЕРЕВОЗКАМ'), { align: 'center' });
+          doc.font(boldFont).fontSize(16).text('СТАТИСТИКА ПО ГРУЗОПЕРЕВОЗКАМ', { align: 'center' });
           doc.moveDown();
           
           const total = report.statistics.reduce((sum, stat) => sum + stat._count, 0);
-          doc.font('Times-Roman').fontSize(12).text(encodeText(`Общее количество заявок: ${total}`));
+          doc.font(regularFont).fontSize(12).text(`Общее количество заявок: ${total}`);
           doc.moveDown();
 
           // Create table
@@ -135,56 +138,54 @@ export class ReportFormatter {
           const colWidth = 200;
           
           // Table header
-          doc.font('Times-Bold').fontSize(12).text(encodeText('Статус заявки'), tableLeft, tableTop);
-          doc.text(encodeText('Количество'), tableLeft + colWidth, tableTop);
+          doc.font(boldFont).fontSize(12).text('Статус заявки', tableLeft, tableTop);
+          doc.text('Количество', tableLeft + colWidth, tableTop);
           doc.moveDown();
           
           // Table rows
-          doc.font('Times-Roman');
+          doc.font(regularFont);
           report.statistics.forEach((stat) => {
-            doc.text(encodeText(statusLabels[stat.status]), tableLeft);
+            doc.text(statusLabels[stat.status], tableLeft);
             doc.text(stat._count.toString(), tableLeft + colWidth);
             doc.moveDown();
           });
         } else if ('financialData' in report) {
-          
-          doc.font('Times-Bold').fontSize(16).text(encodeText('ФИНАНСОВЫЙ ОТЧЕТ'), { align: 'center' });
+          doc.font(boldFont).fontSize(16).text('ФИНАНСОВЫЙ ОТЧЕТ', { align: 'center' });
           doc.moveDown();
 
           const totalCost = report.financialData.reduce((sum, data) => sum + (data.cost || 0), 0);
-          doc.font('Times-Roman').fontSize(12).text(encodeText(`Общая сумма: ${totalCost.toLocaleString('ru-RU')} ₽`));
+          doc.font(regularFont).fontSize(12).text(`Общая сумма: ${totalCost.toLocaleString('ru-RU')} ₽`);
           doc.moveDown();
 
           report.financialData.forEach((data) => {
-            doc.font('Times-Bold').fontSize(12).text(encodeText(`Заявка №${data.id}`));
-            doc.font('Times-Roman').fontSize(10).text(encodeText(`Дата: ${data.createdAt.toLocaleString('ru-RU')}`));
-            doc.text(encodeText(`Статус: ${statusLabels[data.status]}`));
-            doc.text(encodeText(`Стоимость: ${data.cost?.toLocaleString('ru-RU') || 'Не указана'} ₽`));
+            doc.font(boldFont).fontSize(12).text(`Заявка №${data.id}`);
+            doc.font(regularFont).fontSize(10).text(`Дата: ${data.createdAt.toLocaleString('ru-RU')}`);
+            doc.text(`Статус: ${statusLabels[data.status]}`);
+            doc.text(`Стоимость: ${data.cost?.toLocaleString('ru-RU') || 'Не указана'} ₽`);
             if (data.tariff) {
-              doc.text(encodeText(`Тариф: ${data.tariff.name}`));
-              doc.text(encodeText(`Базовая ставка: ${data.tariff.baseRate.toLocaleString('ru-RU')} ₽`));
-              doc.text(encodeText(`Ставка за вес: ${data.tariff.weightRate.toLocaleString('ru-RU')} ₽/кг`));
-              doc.text(encodeText(`Ставка за объем: ${data.tariff.volumeRate.toLocaleString('ru-RU')} ₽/м³`));
-              doc.text(encodeText(`Ставка за расстояние: ${data.tariff.distanceRate.toLocaleString('ru-RU')} ₽/км`));
+              doc.text(`Тариф: ${data.tariff.name}`);
+              doc.text(`Базовая ставка: ${data.tariff.baseRate.toLocaleString('ru-RU')} ₽`);
+              doc.text(`Ставка за вес: ${data.tariff.weightRate.toLocaleString('ru-RU')} ₽/кг`);
+              doc.text(`Ставка за объем: ${data.tariff.volumeRate.toLocaleString('ru-RU')} ₽/м³`);
+              doc.text(`Ставка за расстояние: ${data.tariff.distanceRate.toLocaleString('ru-RU')} ₽/км`);
             }
             doc.moveDown();
           });
         } else if ('userActivity' in report) {
-          
-          doc.font('Times-Bold').fontSize(16).text(encodeText('ОТЧЕТ ПО АКТИВНОСТИ ПОЛЬЗОВАТЕЛЕЙ'), { align: 'center' });
+          doc.font(boldFont).fontSize(16).text('ОТЧЕТ ПО АКТИВНОСТИ ПОЛЬЗОВАТЕЛЕЙ', { align: 'center' });
           doc.moveDown();
 
           const totalUsers = report.userActivity.length;
           const totalRequests = report.userActivity.reduce((sum, user) => sum + user._count.requests, 0);
-          doc.font('Times-Roman').fontSize(12).text(encodeText(`Всего пользователей: ${totalUsers}`));
-          doc.text(encodeText(`Всего заявок: ${totalRequests}`));
+          doc.font(regularFont).fontSize(12).text(`Всего пользователей: ${totalUsers}`);
+          doc.text(`Всего заявок: ${totalRequests}`);
           doc.moveDown();
 
           report.userActivity.forEach((user) => {
-            doc.font('Times-Bold').fontSize(12).text(encodeText(`${user.lastName} ${user.firstName}`));
-            doc.font('Times-Roman').fontSize(10).text(encodeText(`Email: ${user.email}`));
-            doc.text(encodeText(`Дата регистрации: ${user.createdAt.toLocaleString('ru-RU')}`));
-            doc.text(encodeText(`Количество заявок: ${user._count.requests}`));
+            doc.font(boldFont).fontSize(12).text(`${user.lastName} ${user.firstName}`);
+            doc.font(regularFont).fontSize(10).text(`Email: ${user.email}`);
+            doc.text(`Дата регистрации: ${user.createdAt.toLocaleString('ru-RU')}`);
+            doc.text(`Количество заявок: ${user._count.requests}`);
             doc.moveDown();
           });
         }
@@ -193,15 +194,14 @@ export class ReportFormatter {
         const pageCount = doc.bufferedPageRange().count;
         for (let i = 0; i < pageCount; i++) {
           doc.switchToPage(i);
-          doc.font('Times-Roman').fontSize(10).text(
-            encodeText(`Страница ${i + 1} из ${pageCount}`),
+          doc.font(regularFont).fontSize(10).text(
+            `Страница ${i + 1} из ${pageCount}`,
             50,
             doc.page.height - 50,
             { align: 'center' }
           );
         }
 
-        
         doc.end();
       } catch (error) {
         console.error('Error in PDF generation:', error);
@@ -214,7 +214,6 @@ export class ReportFormatter {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Отчет');
 
-    // Add report header
     worksheet.mergeCells('A1:B1');
     worksheet.getCell('A1').value = 'ООО "ТРЭНС ВЭСТОР"';
     worksheet.getCell('A1').font = { size: 16, bold: true };

@@ -92,22 +92,13 @@ jobs:
         [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
         nvm use 22.16.0
 
-        # Clone or update repository
+        # Always clone fresh repository
         cd /home
         if [ -d \"app\" ]; then
-          cd app
-          if [ -d \".git\" ]; then
-            git config pull.rebase true
-            git pull https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
-          else
-            # If app exists but is not a git repo, backup and clone fresh
-            cd ..
-            mv app app_backup_\$(date +%Y%m%d_%H%M%S)
-            git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git app
-          fi
-        else
-          git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git app
+          # Backup existing app directory
+          mv app app_backup_\$(date +%Y%m%d_%H%M%S)
         fi
+        git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git app
 
         cd /home/app
 

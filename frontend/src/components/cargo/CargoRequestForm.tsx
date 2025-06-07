@@ -14,7 +14,7 @@ import { AddressSection } from './form-sections/AddressSection';
 import { TransportationDateTime } from './form-sections/TransportationDateTime';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { referenceApi } from '@/api/api';
+import { referenceApi } from '@/api';
 
 const initialFormData: FormValues = {
   cargoTypeId: '',
@@ -128,7 +128,7 @@ export const CargoRequestForm: React.FC = () => {
       return;
     }
 
-    const response = await submitRequest();
+    const response = await submitRequest(formData);
     if (response) {
       clearSavedFormData();
       navigate('/my-requests');

@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { TariffsList } from '@/components/admin/TariffsList';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { api } from '@/lib/api';
 import { Tariff } from '@/types/api';
 import { Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { tariffsApi } from '@/api';
 import {
   Dialog,
   DialogContent,
@@ -54,10 +54,10 @@ export function TariffsPage() {
   const fetchTariffs = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get<PaginatedResponse>(`/tariffs?page=${currentPage}&limit=${pageSize}`);
-      setTariffs(response.data.tariffs);
-      setTotalPages(response.data.pagination.totalPages);
-      setTotalItems(response.data.pagination.total);
+      const response = await tariffsApi.getTariffs(currentPage, pageSize);
+      setTariffs(response.tariffs);
+      setTotalPages(response.pagination.totalPages);
+      setTotalItems(response.pagination.total);
     } catch {
       toast({
         title: "Ошибка",
@@ -94,7 +94,7 @@ export function TariffsPage() {
     if (!tariffToDelete) return;
 
     try {
-      await api.delete(`/tariffs/${tariffToDelete}`);
+      await tariffsApi.deleteTariff(tariffToDelete);
       toast({
         title: "Успех",
         description: "Тариф успешно удален",
@@ -121,13 +121,13 @@ export function TariffsPage() {
     try {
       const tariffData = data as Omit<Tariff, 'id'>;
       if (selectedTariff) {
-        await api.patch(`/tariffs/${selectedTariff.id}`, tariffData);
+        await tariffsApi.updateTariff(selectedTariff.id, tariffData);
         toast({
           title: "Успех",
           description: "Тариф успешно обновлен",
         });
       } else {
-        await api.post('/tariffs', tariffData);
+        await tariffsApi.createTariff(tariffData);
         toast({
           title: "Успех",
           description: "Тариф успешно создан",

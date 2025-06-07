@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { authApi } from '@/api/api';
+import { authApi } from '@/api';
 import { Loading } from '@/components/ui/loading';
-import { api } from '@/api/api';
+import { api } from '@/lib/api';
 
 interface User {
   id: string;
@@ -39,12 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login(email, password);
-      const { user, token } = response;
+      console.log('Login response:', response);
       
-      if (!token) {
-        throw new Error('No token received from server');
+      if (!response || !response.user || !response.token) {
+        throw new Error('Invalid response from server');
       }
 
+      const { user, token } = response;
+      console.log('User:', user);
+      console.log('Token:', token);
+      
       localStorage.setItem('auth_token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
@@ -64,8 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     company?: string;
   }) => {
     try {
-      const response = await authApi.register(userData);
-      const { user, token } = response;
+      const { user, token } = await authApi.register(userData);
       
       localStorage.setItem('auth_token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;

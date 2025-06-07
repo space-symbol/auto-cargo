@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import fastify from 'fastify';
 import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
@@ -14,7 +13,6 @@ async function buildApp() {
   const app = fastify({
     logger: true
   });
-  const prisma = new PrismaClient();
 
   // Регистрируем плагины
   await app.register(cors, {
@@ -43,10 +41,10 @@ async function buildApp() {
   // Регистрируем маршруты
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(cargoRoutes, { prefix: '/api/cargo' });
-  await app.register(tariffRoutes, { prefix: '/api/tariff' });
+  await app.register(tariffRoutes, { prefix: '/api' });
   await app.register(referenceRoutes, { prefix: '/api/reference' });
   await app.register(reportRoutes, { prefix: '/api/reports' });
-  await app.register(userManagementRoutes, { prefix: '/api/users' });
+  await app.register(userManagementRoutes, { prefix: '/api' });
   return app;
 }
 

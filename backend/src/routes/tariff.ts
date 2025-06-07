@@ -45,7 +45,7 @@ export default async function tariffRoutes(fastify: FastifyInstance) {
       }
       const decoded = await verifyToken(token);
       (request as AuthenticatedRequest).user = decoded;
-    } catch (error) {
+    } catch {
       reply.code(401).send({ error: 'Unauthorized' });
     }
   };

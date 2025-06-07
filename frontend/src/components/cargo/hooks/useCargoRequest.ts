@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { FormValues } from '../types/cargoRequestTypes';
 import React from 'react';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -14,45 +14,49 @@ export const useCargoRequest = ({ formData, toast }: UseCargoRequestProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
-  const submitRequest = React.useCallback(async () => {
+  const submitRequest = React.useCallback(async (requestData?: any) => {
     if (!user) {
       toast({
         title: 'Ошибка',
-        description: 'Необходимо авторизоваться для создания заявки',
+        description: 'Для создания заявки необходимо авторизоваться',
         variant: 'destructive',
       });
-      return;
+      return null;
     }
 
-    if (!formData.fromCity || !formData.toCity || !formData.weight || !formData.volume || !formData.vehicleTypeId) {
+    if (!formData.cargoTypeId || !formData.vehicleTypeId || !formData.weight || !formData.volume || !formData.transportationDateTime) {
       toast({
         title: 'Ошибка',
         description: 'Пожалуйста, заполните все необходимые поля',
         variant: 'destructive',
       });
-      return;
+      return null;
     }
 
     setIsSubmitting(true);
     try {
+      // Convert datetime-local value to ISO 8601 format
+      const dateTime = new Date(formData.transportationDateTime);
+      const isoDateTime = dateTime.toISOString();
+
       const response = await cargoApi.submitRequest({
-        cargoTypeId: formData.cargoTypeId,
-        vehicleTypeId: formData.vehicleTypeId,
-        weight: formData.weight,
-        volume: formData.volume,
+        cargoTypeId: requestData?.cargoTypeId || formData.cargoTypeId,
+        vehicleTypeId: requestData?.vehicleTypeId || formData.vehicleTypeId,
+        weight: requestData?.weight || formData.weight,
+        volume: requestData?.volume || formData.volume,
         fromAddress: {
-          city: formData.fromCity,
-          street: formData.fromStreet,
-          building: formData.fromBuilding,
+          city: requestData?.fromCity || formData.fromCity,
+          street: requestData?.fromStreet || formData.fromStreet,
+          building: requestData?.fromBuilding || formData.fromBuilding,
           country: 'Россия'
         },
         toAddress: {
-          city: formData.toCity,
-          street: formData.toStreet,
-          building: formData.toBuilding,
+          city: requestData?.toCity || formData.toCity,
+          street: requestData?.toStreet || formData.toStreet,
+          building: requestData?.toBuilding || formData.toBuilding,
           country: 'Россия'
         },
-        transportationDateTime: formData.transportationDateTime,
+        transportationDateTime: isoDateTime,
         userId: user.id
       });
 
@@ -63,7 +67,7 @@ export const useCargoRequest = ({ formData, toast }: UseCargoRequestProps) => {
 
       return response;
     } catch (error) {
-      console.error('Error creating cargo request:', error);
+      console.error('Error creating request:', error);
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать заявку',

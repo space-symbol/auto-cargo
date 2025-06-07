@@ -3,11 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DatePickerInput } from '@/components/ui/date-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { api } from '@/lib/api';
 import { toast } from 'sonner';
-
-type ReportType = 'cargo-statistics' | 'financial' | 'user-activity';
-type ReportFormat = 'pdf' | 'excel' | 'csv';
+import { reportsApi, ReportType, ReportFormat } from '@/api';
 
 export default function Reports() {
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -19,17 +16,15 @@ export default function Reports() {
   const handleDownload = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get(`reports/${reportType}`, {
-        params: {
-          startDate: startDate?.toISOString().split('T')[0],
-          endDate: endDate?.toISOString().split('T')[0],
-          format
-        },
-        responseType: 'blob'
+      const blob = await reportsApi.downloadReport({
+        reportType,
+        format,
+        startDate: startDate?.toISOString().split('T')[0],
+        endDate: endDate?.toISOString().split('T')[0]
       });
 
       // Create a download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `${reportType}-report.${format}`);

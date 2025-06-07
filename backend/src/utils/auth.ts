@@ -38,7 +38,7 @@ export const authenticate = async (request: FastifyRequest, reply: FastifyReply)
     }
     const decoded = await verifyToken(token);
     (request as AuthenticatedRequest).user = decoded;
-  } catch (_error) {
+  } catch {
     reply.code(401).send({ error: 'Unauthorized' });
   }
 };
@@ -50,7 +50,7 @@ export const requireRole = (allowedRoles: UserRole[]) => {
       if (!user || !allowedRoles.includes(user.role)) {
         throw new Error('Access denied');
       }
-    } catch (_error) {
+    } catch {
       reply.code(403).send({ error: 'Forbidden' });
     }
   };

@@ -4,7 +4,7 @@ import { RequestsList } from '@/components/admin/RequestsList';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { CargoRequestStatus, CargoRequest } from '@/types/api';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function RequestsPage() {

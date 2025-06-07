@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { cargoApi } from '@/api/api';
+import { cargoApi } from '@/api';
 import { FormValues } from '../types/cargoRequestTypes';
 import React from 'react';
 
@@ -25,6 +25,10 @@ export const useCostCalculation = ({ formData, toast }: UseCostCalculationProps)
 
     setIsCalculating(true);
     try {
+      // Convert datetime-local value to ISO 8601 format
+      const dateTime = new Date(formData.transportationDateTime);
+      const isoDateTime = dateTime.toISOString();
+
       const response = await cargoApi.calculateCost({
         cargoTypeId: formData.cargoTypeId,
         vehicleTypeId: formData.vehicleTypeId,
@@ -42,7 +46,7 @@ export const useCostCalculation = ({ formData, toast }: UseCostCalculationProps)
           building: formData.toBuilding,
           country: 'Россия'
         },
-        transportationDateTime: formData.transportationDateTime
+        transportationDateTime: isoDateTime
       });
       setCalculatedCost(response.cost);
     } catch (error) {
