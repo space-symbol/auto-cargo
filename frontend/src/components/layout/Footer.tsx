@@ -1,4 +1,3 @@
-
 export default function Footer() {
   return (
     <footer className="bg-company-dark text-white py-10">
@@ -20,6 +19,9 @@ export default function Footer() {
         </div>
         <div className="mt-10 pt-6 border-t border-company-primary/30 text-center text-company-light/60 text-sm">
           &copy; {new Date().getFullYear()} ООО "ТРЭНС ВЭСТОР". Все права защищены.
+          <div className="mt-2 text-xs">
+            Разработано студенткой Бектеновой Дианой Рустамовной из группы 41ИС
+          </div>
         </div>
       </div>
     </footer>
