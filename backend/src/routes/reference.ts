@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { Type } from '@sinclair/typebox';
 import { ReferenceService } from '../services/reference';
 import { prisma } from '../lib/prisma';
+import { logBusinessEvent, createRequestContext, logExternalApiError } from '../utils/logger';
+import { asyncHandler, ValidationError } from '../utils/error-handler';
 import axios from 'axios';
 
 export async function referenceRoutes(fastify: FastifyInstance) {
@@ -18,9 +20,27 @@ export async function referenceRoutes(fastify: FastifyInstance) {
         }))
       }
     }
-  }, async () => {
-    return referenceService.getVehicleTypes();
-  });
+  }, asyncHandler(async (request, reply) => {
+    const context = createRequestContext(request);
+    const startTime = Date.now();
+    
+    try {
+      const vehicleTypes = await referenceService.getVehicleTypes();
+      
+      logBusinessEvent('vehicle_types_retrieved', {
+        count: vehicleTypes.length,
+        duration: Date.now() - startTime
+      }, context);
+      
+      return vehicleTypes;
+    } catch (error) {
+      logBusinessEvent('vehicle_types_retrieval_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime
+      }, context);
+      throw error;
+    }
+  }));
 
   fastify.get('/cargo-types', {
     schema: {
@@ -32,9 +52,27 @@ export async function referenceRoutes(fastify: FastifyInstance) {
         }))
       }
     }
-  }, async () => {
-    return referenceService.getCargoTypes();
-  });
+  }, asyncHandler(async (request, reply) => {
+    const context = createRequestContext(request);
+    const startTime = Date.now();
+    
+    try {
+      const cargoTypes = await referenceService.getCargoTypes();
+      
+      logBusinessEvent('cargo_types_retrieved', {
+        count: cargoTypes.length,
+        duration: Date.now() - startTime
+      }, context);
+      
+      return cargoTypes;
+    } catch (error) {
+      logBusinessEvent('cargo_types_retrieval_failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime
+      }, context);
+      throw error;
+    }
+  }));
 
   fastify.post('/addresses', {
     schema: {
@@ -55,7 +93,7 @@ export async function referenceRoutes(fastify: FastifyInstance) {
         })
       }
     }
-  }, async (request, reply) => {
+  }, asyncHandler(async (request, reply) => {
     const addressData = request.body as {
       city: string;
       street: string;
@@ -63,14 +101,33 @@ export async function referenceRoutes(fastify: FastifyInstance) {
       country: string;
     };
     
+    const context = createRequestContext(request);
+    const startTime = Date.now();
+    
+    // Валидация данных
+    if (!addressData.city || !addressData.street || !addressData.building || !addressData.country) {
+      throw new ValidationError('All address fields are required');
+    }
+    
     try {
       const address = await referenceService.createAddress(addressData);
+      
+      logBusinessEvent('address_created', {
+        addressId: address.id,
+        city: address.city,
+        duration: Date.now() - startTime
+      }, context);
+      
       return address;
     } catch (error) {
-      fastify.log.error('Error creating address:', error);
-      return reply.status(500).send({ error: 'Failed to create address' });
+      logBusinessEvent('address_creation_failed', {
+        addressData,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime
+      }, context);
+      throw error;
     }
-  });
+  }));
 
   // Расчет расстояния между адресами
   fastify.post('/calculate-distance', {
@@ -85,34 +142,57 @@ export async function referenceRoutes(fastify: FastifyInstance) {
         })
       }
     }
-  }, async (request, reply) => {
+  }, asyncHandler(async (request, reply) => {
     const { fromAddress, toAddress } = request.body as {
       fromAddress: string;
       toAddress: string;
     };
     
+    const context = createRequestContext(request);
+    const startTime = Date.now();
+    
+    // Валидация данных
+    if (!fromAddress || !toAddress) {
+      throw new ValidationError('Both fromAddress and toAddress are required');
+    }
+    
     try {
       const distance = await referenceService.calculateDistance(fromAddress, toAddress);
+      
+      logBusinessEvent('distance_calculated', {
+        fromAddress,
+        toAddress,
+        distance,
+        duration: Date.now() - startTime
+      }, context);
+      
       return { distance };
     } catch (error) {
-      fastify.log.error('Error calculating distance:', error);
-      return reply.status(500).send({ 
-        error: error instanceof Error ? error.message : 'Failed to calculate distance' 
-      });
+      logBusinessEvent('distance_calculation_failed', {
+        fromAddress,
+        toAddress,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime
+      }, context);
+      throw error;
     }
-  });
+  }));
 
-  fastify.get('/suggest', async (request, reply) => {
+  fastify.get('/suggest', asyncHandler(async (request, reply) => {
     const { text } = request.query as { text?: string };
+    const context = createRequestContext(request);
+    const startTime = Date.now();
     
     if (!text) {
-      return reply.status(400).send({ error: 'Text parameter is required' });
+      throw new ValidationError('Text parameter is required');
     }
 
     const apiKey = process.env.YANDEX_SUGGESSIONS_MAPS_API_KEY;
     if (!apiKey) {
-      fastify.log.error('YANDEX_SUGGESSIONS_MAPS_API_KEY is not set in environment variables');
-      return reply.status(500).send({ error: 'API key is not configured' });
+      logBusinessEvent('api_key_missing', {
+        service: 'Yandex Geosuggest API'
+      }, context);
+      throw new Error('API key is not configured');
     }
 
     const params = {
@@ -125,7 +205,10 @@ export async function referenceRoutes(fastify: FastifyInstance) {
       highlight: '1'
     };
 
-    fastify.log.info('Sending request to Yandex Geosuggest API with params:', params);
+    logBusinessEvent('geosuggest_request_started', {
+      text: params.text,
+      duration: Date.now() - startTime
+    }, context);
 
     try {
       const response = await axios.get(
@@ -140,21 +223,23 @@ export async function referenceRoutes(fastify: FastifyInstance) {
       );
 
       if (!response.data || !response.data.results) {
-        fastify.log.error('Invalid response from Yandex API:', response.data);
-        return reply.status(500).send({ error: 'Invalid response from Yandex API' });
+        logBusinessEvent('geosuggest_invalid_response', {
+          responseData: response.data,
+          duration: Date.now() - startTime
+        }, context);
+        throw new Error('Invalid response from Yandex API');
       }
+
+      logBusinessEvent('geosuggest_request_successful', {
+        text: params.text,
+        resultsCount: response.data.results?.length || 0,
+        duration: Date.now() - startTime
+      }, context);
 
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        fastify.log.error('Yandex API error:', {
-          status: error.response?.status,
-          data: error.response?.data,
-          config: {
-            url: error.config?.url,
-            params: error.config?.params
-          }
-        });
+        logExternalApiError(error, 'Yandex Geosuggest API', '/suggest', context);
         
         if (error.response) {
           return reply.status(error.response.status).send({
@@ -164,11 +249,13 @@ export async function referenceRoutes(fastify: FastifyInstance) {
         }
       }
       
-      fastify.log.error('Unexpected error:', error);
-      return reply.status(500).send({ 
-        error: 'Failed to fetch suggestions',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logBusinessEvent('geosuggest_request_failed', {
+        text: params.text,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime
+      }, context);
+      
+      throw error;
     }
-  });
+  }));
 } 

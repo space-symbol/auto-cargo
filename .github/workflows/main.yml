@@ -139,5 +139,5 @@ jobs:
         if pm2 list | grep -q 'backend'; then
           pm2 restart backend
         else
-          pm2 start dist/index.js --name \"backend\"
+          LOG_LEVEL=debug pm2 start dist/index.js --name \"backend\"
         fi" 
